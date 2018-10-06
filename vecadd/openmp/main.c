@@ -2,8 +2,7 @@
 #include <stdlib.h>
 #include <omp.h>
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]) {
     const int n = 100000000;
 
     double* A = (double*) malloc(n * sizeof(double));

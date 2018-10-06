@@ -2,8 +2,7 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]) {
     MPI_Init(NULL, NULL);
     const int n = 100000000;
     double alpha = 0.9;
