@@ -17,9 +17,8 @@ int main(int argc, char const *argv[]) {
         printf("Not enough arguments: ./main <filename> <iterations> <output file>\n");
         exit(1);
     }
-    int num_threads = 4;
-    printf("%d\n", num_threads);
-    omp_set_num_threads(4);
+    int num_threads = 16;
+    omp_set_num_threads(num_threads);
     /* Read initial position, velocity and mass of the bodies */
     FILE* f;
     f = fopen(argv[1], "r");

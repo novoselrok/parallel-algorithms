@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 #define X 0
 #define Y 1
@@ -36,6 +37,7 @@ int main(int argc, char const *argv[]) {
     vect3_t* velocities = malloc(n_bodies * sizeof(vect3_t));
     double* masses = malloc(n_bodies * sizeof(double));
 
+    printf("Reading the file...\n");
     for (int i = 0; i < n_bodies; i++) {
         double x, y, z, vx, vy, vz, mass;
         fgets(str, MAX_LINE_LENGTH, f);
@@ -50,7 +52,8 @@ int main(int argc, char const *argv[]) {
 
         masses[i] = mass;
     }
-
+    printf("Done...\n");
+    time_t start = time(NULL);
     double dt = 0.1;
     for (int i = 0; i < iterations; i++) {
         // Reset forces
@@ -99,6 +102,7 @@ int main(int argc, char const *argv[]) {
         // }
         // printf("\n===\n");
     }
+    printf("Time: %.2f\n", (double)(time(NULL) - start));
 
     FILE* outf;
     outf = fopen(argv[3], "w");
