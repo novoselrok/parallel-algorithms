@@ -1,12 +1,11 @@
 use Time;
-var watch: Timer;
 
 config const filename = "input.txt";
 config const iterations = 1;
 config const out_filename = "out.txt";
-const X = 0;
-const Y = 1;
-const Z = 2;
+const X = 1;
+const Y = 2;
+const Z = 3;
 const G = 6.67e-11;
 config const dt = 0.1;
 
@@ -17,7 +16,7 @@ var reader = f.reader();
 var n_bodies = reader.read(int);
 const pDomain = {0..#n_bodies};
 
-type vec3 = [0..#3] real;
+type vec3 = 3*real;
 
 var forces: [pDomain] vec3;
 var velocities: [pDomain] vec3;
@@ -25,23 +24,21 @@ var positions: [pDomain] vec3;
 var masses: [pDomain] real;
 
 for i in pDomain {
-  positions[i] = reader.read(vec3);
-  velocities[i] = reader.read(vec3);
+  positions[i] = reader.read(real, real, real);
+  velocities[i] = reader.read(real, real, real);
   masses[i] = reader.read(real);
 }
 
 f.close();
 reader.close();
-
 writeln("Done reading...");
+
+var watch: Timer;
 watch.start();
 for i in 0..#iterations {
   // Reset forces                                                           
-  forces = [0.0, 0.0, 0.0];
-  writeln(i);
+  forces = (0.0, 0.0, 0.0);
   forall q in pDomain with (+ reduce forces) {
-    writeln("q ", q);
-    stdout.flush();
     for k in pDomain {
       if k <= q {
         continue;
@@ -49,7 +46,6 @@ for i in 0..#iterations {
       var diff = positions[q] - positions[k];
       var dist = sqrt(diff[X]**2 + diff[Y]**2 + diff[Z]**2);
       var dist_cubed = dist**3;
-    //   writeln(diff, dist);
       var tmp = -G * masses[q] * masses[k] / dist_cubed;
       var force_qk = tmp * diff;
 
@@ -63,7 +59,7 @@ for i in 0..#iterations {
     velocities[q] += dt / masses[q] * forces[q];
   }
 }
-writeln("\nThe simulation took ", watch.elapsed(), " seconds");
+writeln("The simulation took ", watch.elapsed(), " seconds");
 
 var outf = open(out_filename, iomode.cw);
 var writer = outf.writer();
