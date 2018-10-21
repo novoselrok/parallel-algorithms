@@ -3,7 +3,6 @@ use Time;
 /* Config variables */
 config const filename = "../data/input.txt";
 config const out_filename = "out.txt";
-config const iterations = 1;
 config const k = 2;
 config const max_iter = 10;
 config const rows = 0;
@@ -15,14 +14,14 @@ var reader = f.reader();
 
 /* Define data structures */
 type Point = [0..#cols] real;
-// type Point = 10 * real;
+// type Point = 16 * real;
 const pDomain = 0..#rows;
 const clustersDomain = 0..#k;
 var data: [pDomain] Point;
 reader.read(data);
 
 // for i in pDomain {
-//     data[i] = reader.read(real, real, real, real, real, real, real, real, real, real);
+//     data[i] = reader.read(real, real, real, real, real, real, real, real, real, real, real, real, real, real, real, real);
 // }
 
 f.close();
@@ -36,7 +35,7 @@ record Cluster {
     proc init() {
         n_points = 0;
         acc = 0.0;
-        // acc = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        // acc = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
     }
 
     proc add_point(point: Point) {
@@ -77,13 +76,15 @@ forall i in pDomain with (+ reduce clusters) {
     clusters[labels[i]].add_point(data[i]);
 }
 
+writeln("-> Init done");
+
 for iteration in 0..#max_iter {
     writeln(iteration);
     [cluster in clusters] cluster.calc_mean();
 
     var new_clusters: [clustersDomain] Cluster;
     forall i in pDomain with (+ reduce new_clusters) {
-        var point = data[i];
+        ref point = data[i];
         var dists = [cluster in clusters] cluster.dist(point);
         var (_, min_index) = minloc reduce zip(dists, dists.domain);
         labels[i] = min_index;

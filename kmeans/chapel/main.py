@@ -4,9 +4,9 @@ from sklearn.cluster import KMeans
 import time
 
 def main():
-    kmeans = KMeans(n_clusters=4, init='random', n_init=1, max_iter=10)
+    kmeans = KMeans(n_clusters=100, init='random', n_init=1, max_iter=10)
 
-    X = np.loadtxt('../data/test100000.txt')
+    X = np.loadtxt('../data/test_R256k_C16_k100.txt')
     print('Start simulation', X.shape)
     start = time.time()
     kmeans.fit(X)
