@@ -14,7 +14,6 @@ def main():
     nbodies = int(sys.argv[2])
 
     with open(fname, 'w', encoding='utf-8') as f:
-        f.write(str(nbodies) + '\n')
         for _ in range(nbodies):
             body = [
                 random.uniform(MIN_POSITION, MAX_POSITION),

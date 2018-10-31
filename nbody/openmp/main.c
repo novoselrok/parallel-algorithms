@@ -14,7 +14,7 @@ typedef double vect3_t[3];
 
 int main(int argc, char const *argv[]) {
     if (argc < 4) {
-        printf("Not enough arguments: ./main <filename> <iterations> <output file>\n");
+        printf("Not enough arguments: ./main <filename> <nbodies> <iterations> <output file>\n");
         exit(1);
     }
     int num_threads = 16;
@@ -26,18 +26,15 @@ int main(int argc, char const *argv[]) {
         printf("File does not exist.\n");
         exit(1);
     }
-    int iterations = atoi(argv[2]);
-
-    char str[MAX_LINE_LENGTH];
-    fgets(str, MAX_LINE_LENGTH, f);
-    int n_bodies;
-    sscanf(str, "%d", &n_bodies);
+    int n_bodies = atoi(argv[2]);
+    int iterations = atoi(argv[3]);
 
     vect3_t* forces = malloc(n_bodies * sizeof(vect3_t));
     vect3_t* positions = malloc(n_bodies * sizeof(vect3_t));
     vect3_t* velocities = malloc(n_bodies * sizeof(vect3_t));
     double* masses = malloc(n_bodies * sizeof(double));
 
+    char str[MAX_LINE_LENGTH];
     for (int i = 0; i < n_bodies; i++) {
         double x, y, z, vx, vy, vz, mass;
         fgets(str, MAX_LINE_LENGTH, f);
@@ -58,6 +55,7 @@ int main(int argc, char const *argv[]) {
         thread_loc_forces[rank] = malloc(n_bodies * sizeof(vect3_t));
     }
     double dt = 0.1;
+    double start_time = omp_get_wtime();
     for (int i = 0; i < iterations; i++) {
         #pragma omp parallel
         {
@@ -124,13 +122,14 @@ int main(int argc, char const *argv[]) {
             }
         }
     }
+    printf("time: %.16g\n", omp_get_wtime() - start_time);
     for (int rank = 0; rank < num_threads; rank++) {
         free(thread_loc_forces[rank]);
     }
     free(thread_loc_forces);
 
     FILE* outf;
-    outf = fopen(argv[3], "w");
+    outf = fopen(argv[4], "w");
     if(outf == NULL) {
         printf("Could not open output file.\n");
         exit(1);
