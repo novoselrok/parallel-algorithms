@@ -122,7 +122,7 @@ int main(int argc, char const *argv[]) {
             }
         }
     }
-    printf("time: %.16g\n", omp_get_wtime() - start_time);
+    printf("%.16g\n", omp_get_wtime() - start_time);
     for (int rank = 0; rank < num_threads; rank++) {
         free(thread_loc_forces[rank]);
     }

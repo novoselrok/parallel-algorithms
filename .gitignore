@@ -2,11 +2,4 @@
 build
 main
 *.txt
-
-!nbody/data/out10.txt
-!nbody/data/out100.txt
-!nbody/data/out1000.txt
-
-!nbody/data/test1e3.txt
-!nbody/data/test1e4.txt
-!nbody/data/test1e5.txt
+*.json
