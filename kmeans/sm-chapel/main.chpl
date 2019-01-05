@@ -16,6 +16,12 @@ record Cluster {
     var pointSum: Point;
     var mean: Point;
 
+    proc init() {}
+
+    proc init(point: Point) {
+        mean = point;
+    }
+
     proc distance(p: Point) {
         return sqrt(+ reduce (mean - p) ** 2);
     }
@@ -40,6 +46,33 @@ record Cluster {
     }
 }
 
+proc kmeansppInit(points: [?] Point, k: int) {
+    var clusters: [0..#1] Cluster = [new Cluster(points[0])];
+    var randStream = new owned RandomStream(real);
+
+    for clusterIdx in 1..k - 1 {
+        var distances = [point in points] (min reduce [cluster in clusters] cluster.distance(point));
+        var distancesSum = + reduce distances;
+        distances = distances / distancesSum;
+
+        for i in 1..distances.size - 1 {
+            distances[i] += distances[i - 1];
+        }
+
+        var random = randStream.getNext();
+        var newIdx = 0;
+        for (i, prob) in zip(distances.domain, distances) {
+            if (random < prob) {
+                newIdx = i;
+                break;
+            }
+        }
+        clusters.push_back(new Cluster(points[newIdx]));
+    }
+
+    return clusters;
+}
+
 // Used when reducing clusters
 proc +(ref c1: Cluster, c2: Cluster) {
     c1.addCluster(c2);
@@ -50,7 +83,6 @@ proc main() {
     var pointsDomain = {0..#numPoints};
     var points: [pointsDomain] Point;
     var clustersDomain = {0..#k};
-    var clusters: [clustersDomain] Cluster;
     var labels: [pointsDomain] int;
     
     /* Read input file */
@@ -65,11 +97,7 @@ proc main() {
     var watch: Timer;
     watch.start();
     /* Algorithm */
-    var randStream = new owned RandomStream(real);
-    for i in clustersDomain {
-        var idx: int = (randStream.getNext() * numPoints):int;
-        clusters[i].setMean(points[idx]);
-    }
+    var clusters = kmeansppInit(points, k);
 
     for iteration in 0..#maxIter {
         writeln(iteration);

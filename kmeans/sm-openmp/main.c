@@ -4,6 +4,7 @@
 #include <time.h>
 #include <string.h>
 #include <float.h>
+#include <omp.h>
 
 #define VERBOSE 1
 #define POINT_SIZE 100
@@ -54,13 +55,29 @@ void calculate_means(cluster_t** clusters, cluster_t** new_clusters, int k) {
     }
 }
 
-void reset_clusters(cluster_t** clusters, int k) {
-    for (int i = 0; i < k; i++) {
-        clusters[i]->count = 0;
-        for (int j = 0; j < POINT_SIZE; j++) {
-            clusters[i]->sum[j] = 0.0;
+void reset_clusters(cluster_t*** clusters_per_thread, int nthreads, int k) {
+    for (int l = 0; l < nthreads; l++) {
+        for (int i = 0; i < k; i++) {
+            clusters_per_thread[l][i]->count = 0;
+            for (int j = 0; j < POINT_SIZE; j++) {
+                clusters_per_thread[l][i]->sum[j] = 0.0;
+            }
         }
     }
+}
+
+cluster_t** sum_reduce_clusters(cluster_t*** clusters_per_thread, int nthreads, int k) {
+    for (int i = 1; i < nthreads; i++) {
+        for (int j = 0; j < k; j++) {
+            clusters_per_thread[0][j]->count += clusters_per_thread[i][j]->count;
+
+            for (int l = 0; l < POINT_SIZE; l++) {
+                clusters_per_thread[0][j]->sum[l] += clusters_per_thread[i][j]->sum[l];
+            }
+        }
+    }
+
+    return clusters_per_thread[0];
 }
 
 void kmeanspp_init(point_t* points, int n_points, cluster_t** clusters, int k) {
@@ -132,6 +149,15 @@ int main(int argc, char const *argv[]) {
     int k = atoi(argv[2]);
     int max_iter = atoi(argv[3]);
     int n_points = atoi(argv[4]);
+    int nthreads;
+
+    #pragma omp parallel
+    {
+        #pragma omp master
+        nthreads = omp_get_num_threads();
+    }
+
+    printf("%d\n", nthreads);
 
     point_t* points = malloc(n_points * sizeof(point_t));
     for (int i = 0; i < n_points; i++) {
@@ -147,17 +173,25 @@ int main(int argc, char const *argv[]) {
     int* labels = malloc(n_points * sizeof(int));
 
     cluster_t** clusters = malloc(k * sizeof(cluster_t*));
-    cluster_t** new_clusters = malloc(k * sizeof(cluster_t*));
+    cluster_t*** new_clusters_per_thread = malloc(nthreads * sizeof(cluster_t**));
     for (int i = 0; i < k; i++) {
         clusters[i] = new_cluster();
-        new_clusters[i] = new_cluster();
     }
 
-    clock_t begin = clock();
+    for (int i = 0; i < nthreads; i++) {
+        new_clusters_per_thread[i] = malloc(k * sizeof(cluster_t**));
+        for (int j = 0; j < k; j++) {
+            new_clusters_per_thread[i][j] = new_cluster();
+        }
+    }
+
+    double start_time = omp_get_wtime();
     kmeanspp_init(points, n_points, clusters, k);
 
     for (int iter = 0; iter < max_iter; iter++) {
+        #pragma omp parallel for
         for (int i = 0; i < n_points; i++) {
+            int thread_id = omp_get_thread_num();
             double min_distance = DBL_MAX;
             int min_index = 0;
             // Calculate closest cluster
@@ -170,19 +204,20 @@ int main(int argc, char const *argv[]) {
             }
             // Get min distance cluster
             labels[i] = min_index;
-            add_point(new_clusters[min_index], points[i]);
+            add_point(new_clusters_per_thread[thread_id][min_index], points[i]);
         }
+
+        cluster_t** new_clusters = sum_reduce_clusters(new_clusters_per_thread, nthreads, k);
 
         // Calculate means
         calculate_means(clusters, new_clusters, k);
 
         // Reset before reusing
-        reset_clusters(new_clusters, k);
+        reset_clusters(new_clusters_per_thread, nthreads, k);
     }
 
-    clock_t end = clock();
-	printf("%f\n", (double)(end - begin) / CLOCKS_PER_SEC);
-    
+    printf("%.16g\n", omp_get_wtime() - start_time);
+
     if (VERBOSE) {
         print_labels("out.txt", labels, n_points);
     }
@@ -193,9 +228,15 @@ int main(int argc, char const *argv[]) {
 
     for (int i = 0; i < k; i++) {
         free(clusters[i]);
-        free(new_clusters[i]);
+    }
+
+    for (int i = 0; i < nthreads; i++) {
+        for (int j = 0; j < k; j++) {
+            free(new_clusters_per_thread[i][j]);
+        }
+        free(new_clusters_per_thread[i]);
     }
 
     free(clusters);
-    free(new_clusters);
+    free(new_clusters_per_thread);
 }
