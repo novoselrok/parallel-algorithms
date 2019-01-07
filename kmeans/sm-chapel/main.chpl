@@ -9,7 +9,7 @@ config const maxIter = 10;
 config const numPoints = 10;
 
 /* Datatypes */
-type Point = 10 * real;
+type Point = 100 * real;
 
 record Cluster {
     var size: int;
@@ -23,7 +23,12 @@ record Cluster {
     }
 
     proc distance(p: Point) {
-        return sqrt(+ reduce (mean - p) ** 2);
+        var squaredDiff = (mean - p) ** 2;
+        var sum = 0.0;
+        for el in squaredDiff {
+            sum += el;
+        }
+        return sqrt(sum);
     }
 
     // Used when reducing clusters
@@ -46,33 +51,6 @@ record Cluster {
     }
 }
 
-proc kmeansppInit(points: [?] Point, k: int) {
-    var clusters: [0..#1] Cluster = [new Cluster(points[0])];
-    var randStream = new owned RandomStream(real);
-
-    for clusterIdx in 1..k - 1 {
-        var distances = [point in points] (min reduce [cluster in clusters] cluster.distance(point));
-        var distancesSum = + reduce distances;
-        distances = distances / distancesSum;
-
-        for i in 1..distances.size - 1 {
-            distances[i] += distances[i - 1];
-        }
-
-        var random = randStream.getNext();
-        var newIdx = 0;
-        for (i, prob) in zip(distances.domain, distances) {
-            if (random < prob) {
-                newIdx = i;
-                break;
-            }
-        }
-        clusters.push_back(new Cluster(points[newIdx]));
-    }
-
-    return clusters;
-}
-
 // Used when reducing clusters
 proc +(ref c1: Cluster, c2: Cluster) {
     c1.addCluster(c2);
@@ -84,6 +62,7 @@ proc main() {
     var points: [pointsDomain] Point;
     var clustersDomain = {0..#k};
     var labels: [pointsDomain] int;
+    var clusters: [clustersDomain] Cluster;
     
     /* Read input file */
     var f = open(filename, iomode.r);
@@ -97,22 +76,35 @@ proc main() {
     var watch: Timer;
     watch.start();
     /* Algorithm */
-    var clusters = kmeansppInit(points, k);
+    var randStream = new owned RandomStream(real);
+    for i in clustersDomain {
+        var idx: int = (randStream.getNext() * numPoints):int;
+        clusters[i] = new Cluster(points[idx]);
+    }
 
     for iteration in 0..#maxIter {
-        writeln(iteration);
         var newClusters: [clustersDomain] Cluster;
         forall i in pointsDomain with (+ reduce newClusters) {
-            // You have to be careful with records since they create copies
+            // You have to be careful with tuples since they create copies
             ref point = points[i];
-            var distances = [cluster in clusters] cluster.distance(point);
 
-            var (_, minIndex) = minloc reduce zip(distances, distances.domain);
+            var minIndex = 0;
+            var minValue = Math.INFINITY;
+            for (idx, cluster) in zip(clusters.domain, clusters) {
+                var distance = cluster.distance(point);
+                if (distance < minValue) {
+                    minValue = distance;
+                    minIndex = idx;
+                }
+            }
+            
             labels[i] = minIndex;
             newClusters[minIndex].addPoint(point);
         }
 
-        [cluster in newClusters] cluster.calcMean();
+        for cluster in newClusters {
+            cluster.calcMean();
+        }
         clusters = newClusters;
     }
     writeln(watch.elapsed());

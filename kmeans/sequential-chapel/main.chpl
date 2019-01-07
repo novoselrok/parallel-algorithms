@@ -1,5 +1,6 @@
 use Random;
 use Time;
+use Math;
 
 /* Config variables */
 config const filename = "../data/test_10_10_2.chpl.txt";
@@ -9,7 +10,7 @@ config const maxIter = 10;
 config const numPoints = 10;
 
 /* Datatypes */
-type Point = 10 * real;
+type Point = 100 * real;
 
 record Cluster {
     var size: int;
@@ -23,7 +24,12 @@ record Cluster {
     }
 
     proc distance(p: Point) {
-        return sqrt(+ reduce (mean - p) ** 2);
+        var squaredDiff = (mean - p) ** 2;
+        var sum = 0.0;
+        for el in squaredDiff {
+            sum += el;
+        }
+        return sqrt(sum);
     }
 
     proc addPoint(p: Point) {
@@ -40,38 +46,12 @@ record Cluster {
     }
 }
 
-proc kmeansppInit(points: [?] Point, k: int) {
-    var clusters: [0..#1] Cluster = [new Cluster(points[0])];
-    var randStream = new owned RandomStream(real);
-
-    for clusterIdx in 1..k - 1 {
-        var distances = [point in points] (min reduce [cluster in clusters] cluster.distance(point));
-        var distancesSum = + reduce distances;
-        distances = distances / distancesSum;
-
-        for i in 1..distances.size - 1 {
-            distances[i] += distances[i - 1];
-        }
-
-        var random = randStream.getNext();
-        var newIdx = 0;
-        for (i, prob) in zip(distances.domain, distances) {
-            if (random < prob) {
-                newIdx = i;
-                break;
-            }
-        }
-        clusters.push_back(new Cluster(points[newIdx]));
-    }
-
-    return clusters;
-}
-
 proc main() {
     var pointsDomain = {0..#numPoints};
     var points: [pointsDomain] Point;
     var clustersDomain = {0..#k};
     var labels: [pointsDomain] int;
+    var clusters: [clustersDomain] Cluster;
     
     /* Read input file */
     var f = open(filename, iomode.r);
@@ -82,24 +62,37 @@ proc main() {
     f.close();
     reader.close();
 
-    /* Algorithm */
     var watch: Timer;
     watch.start();
-    var clusters = kmeansppInit(points, k);
+    /* Algorithm */
+    var randStream = new owned RandomStream(real);
+    for i in clustersDomain {
+        var idx: int = (randStream.getNext() * numPoints):int;
+        clusters[i] = new Cluster(points[idx]);
+    }
 
     for iteration in 0..#maxIter {
         var newClusters: [clustersDomain] Cluster;
         for i in pointsDomain {
-            // You have to be careful with records since they create copies
+            // You have to be careful with tuples since they create copies
             ref point = points[i];
-            var distances = [cluster in clusters] cluster.distance(point);
 
-            var (_, minIndex) = minloc reduce zip(distances, distances.domain);
+            var minIndex = 0;
+            var minValue = Math.INFINITY;
+            for (idx, cluster) in zip(clusters.domain, clusters) {
+                var distance = cluster.distance(point);
+                if (distance < minValue) {
+                    minValue = distance;
+                    minIndex = idx;
+                }
+            }
             labels[i] = minIndex;
             newClusters[minIndex].addPoint(point);
         }
 
-        [cluster in newClusters] cluster.calcMean();
+        for cluster in newClusters {
+            cluster.calcMean();
+        }
         clusters = newClusters;
     }
     writeln(watch.elapsed());

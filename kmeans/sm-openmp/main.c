@@ -80,49 +80,6 @@ cluster_t** sum_reduce_clusters(cluster_t*** clusters_per_thread, int nthreads, 
     return clusters_per_thread[0];
 }
 
-void kmeanspp_init(point_t* points, int n_points, cluster_t** clusters, int k) {
-    // Select the first point as the first cluster center
-    set_cluster_mean(clusters[0], points[0]);
-
-    double* distances = malloc(n_points * sizeof(double));
-
-    for(int cluster_idx = 1; cluster_idx < k; cluster_idx++) {
-        double sum = 0.0;
-        for (int i = 0; i < n_points; i++) {
-            double min_distance = DBL_MAX;
-            // Calculate closest cluster
-            for (int j = 0; j < k; j++) {
-                double distance_to_cluster = distance(clusters[j], points[i]);
-                if (distance_to_cluster < min_distance) {
-                    min_distance = distance_to_cluster;
-                }
-            }
-            distances[i] = min_distance;
-            sum += min_distance;
-        }
-
-        // Convert to probabilities and perform cumulative sum
-        for (int i = 0; i < n_points; i++) {
-            distances[i] /= sum;
-
-            if (i > 0) {
-                distances[i] += distances[i - 1];
-            }
-        }
-
-        double random = rand() / (double) RAND_MAX;
-        int new_idx = 0;
-        for (int i = 0; i < n_points; i++) {
-            if (random < distances[i]) {
-                new_idx = i;
-                break;
-            }
-        }
-        set_cluster_mean(clusters[cluster_idx], points[new_idx]);
-    }
-    free(distances);
-}
-
 void print_labels(char* filename, int* labels, int length) {
     FILE* outf;
     outf = fopen(filename, "w");
@@ -186,7 +143,10 @@ int main(int argc, char const *argv[]) {
     }
 
     double start_time = omp_get_wtime();
-    kmeanspp_init(points, n_points, clusters, k);
+    for (int i = 0; i < k; i++) {
+        int idx = (int) ((rand() / (double) RAND_MAX) * n_points);
+        set_cluster_mean(clusters[i], points[idx]);
+    }
 
     for (int iter = 0; iter < max_iter; iter++) {
         #pragma omp parallel for
