@@ -20,7 +20,7 @@ Cluster() = Cluster(0, Point(zeros(POINT_SIZE)), Point(zeros(POINT_SIZE)))
 Cluster(point::Point) = Cluster(0, Point(zeros(POINT_SIZE)), point)
 
 function distance(cluster::Cluster, point::Point)
-    sqrt(sum((cluster.mean - point) .^ 2))
+    sqrt(sum((cluster.mean .- point) .^ 2))
 end
 
 function add_point(cluster::Cluster, point::Point)

@@ -17,15 +17,6 @@ typedef struct _cluster_t {
     int count;
 } cluster_t;
 
-cluster_t* new_cluster() {
-    cluster_t* cluster = (cluster_t*) malloc(sizeof(cluster_t));
-    cluster->count = 0;
-    for (int i = 0; i < POINT_SIZE; i++) {
-        cluster->sum[i] = 0.0;
-    }
-    return cluster;
-}
-
 void set_cluster_mean(cluster_t* cluster, point_t mean) {
     memcpy(cluster->mean, mean, POINT_SIZE * sizeof(double));
 }
@@ -46,20 +37,24 @@ double distance(cluster_t* cluster, point_t point) {
     return sqrt(sum_squares);
 }
 
-void calculate_means(cluster_t** clusters, cluster_t** new_clusters, int k) {
+void calculate_means(cluster_t* clusters, cluster_t* new_clusters, int k) {
     for (int i = 0; i < k; i++) {
         for (int j = 0; j < POINT_SIZE; j++) {
-            clusters[i]->mean[j] = new_clusters[i]->sum[j] / new_clusters[i]->count;
+            clusters[i].mean[j] = new_clusters[i].sum[j] / new_clusters[i].count;
         }
     }
 }
 
-void reset_clusters(cluster_t** clusters, int k) {
+void reset_cluster(cluster_t* cluster) {
+    cluster->count = 0;
+    for (int i = 0; i < POINT_SIZE; i++) {
+        cluster->sum[i] = 0.0;
+    }
+}
+
+void reset_clusters(cluster_t* clusters, int k) {
     for (int i = 0; i < k; i++) {
-        clusters[i]->count = 0;
-        for (int j = 0; j < POINT_SIZE; j++) {
-            clusters[i]->sum[j] = 0.0;
-        }
+        reset_cluster(&clusters[i]);
     }
 }
 
@@ -103,18 +98,16 @@ int main(int argc, char const *argv[]) {
     /* Algorithm */
     int* labels = malloc(n_points * sizeof(int));
 
-    cluster_t** clusters = malloc(k * sizeof(cluster_t*));
-    cluster_t** new_clusters = malloc(k * sizeof(cluster_t*));
-    for (int i = 0; i < k; i++) {
-        clusters[i] = new_cluster();
-        new_clusters[i] = new_cluster();
-    }
+    cluster_t* clusters = malloc(k * sizeof(cluster_t));
+    cluster_t* new_clusters = malloc(k * sizeof(cluster_t));
+    reset_clusters(clusters, k);
+    reset_clusters(new_clusters, k);
 
     clock_t begin = clock();
 
     for (int i = 0; i < k; i++) {
         int idx = (int) ((rand() / (double) RAND_MAX) * n_points);
-        set_cluster_mean(clusters[i], points[idx]);
+        set_cluster_mean(&clusters[i], points[idx]);
     }
 
     for (int iter = 0; iter < max_iter; iter++) {
@@ -123,7 +116,7 @@ int main(int argc, char const *argv[]) {
             int min_index = 0;
             // Calculate closest cluster
             for (int j = 0; j < k; j++) {
-                double distance_to_cluster = distance(clusters[j], points[i]);
+                double distance_to_cluster = distance(&clusters[j], points[i]);
                 if (distance_to_cluster < min_distance) {
                     min_distance = distance_to_cluster;
                     min_index = j;
@@ -131,7 +124,7 @@ int main(int argc, char const *argv[]) {
             }
             // Get min distance cluster
             labels[i] = min_index;
-            add_point(new_clusters[min_index], points[i]);
+            add_point(&new_clusters[min_index], points[i]);
         }
 
         // Calculate means
@@ -151,12 +144,6 @@ int main(int argc, char const *argv[]) {
     // Cleanup
     free(points);
     free(labels);
-
-    for (int i = 0; i < k; i++) {
-        free(clusters[i]);
-        free(new_clusters[i]);
-    }
-
     free(clusters);
     free(new_clusters);
 }
