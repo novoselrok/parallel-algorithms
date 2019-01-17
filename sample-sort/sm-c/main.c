@@ -59,10 +59,10 @@ int binary_search(T* arr, int n, T el) {
 
 void map_keys_to_bins(T* arr, int n, int m, T* sample_keys, int* index, int* freq) {
     for (int i = 0; i < n; i++) {
-        int bucket_idx = binary_search(sample_keys, m - 1, arr[i]);
-        // printf("Key: %d, Bucket idx: %d\n", arr[i], bucket_idx);
-        index[i] = bucket_idx;
-        freq[bucket_idx] += 1;
+        int bin_idx = binary_search(sample_keys, m - 1, arr[i]);
+        // printf("Key: %d, Bin idx: %d\n", arr[i], bin_idx);
+        index[i] = bin_idx;
+        freq[bin_idx] += 1;
     }
 }
 
@@ -98,12 +98,12 @@ void bin(T* arr, int n, T*** bins, int** tally, int m) {
         }
 
         for (int i = 0; i < subarray_size; i++) {
-            int bucket_idx = index[i];
+            int bin_idx = index[i];
             int key = arr[start + i];
-            // We use freq[bucket_idx] as an index into the bin array
-            freq[bucket_idx] -= 1;
-            bins[thread_id][bucket_idx][freq[bucket_idx]] = key;
-            tally[thread_id][bucket_idx] += 1;
+            // We use freq[bin_idx] as an index into the bin array
+            freq[bin_idx] -= 1;
+            bins[thread_id][bin_idx][freq[bin_idx]] = key;
+            tally[thread_id][bin_idx] += 1;
         }
         // Cleanup
         free(freq);
@@ -164,7 +164,6 @@ void subsort(T* sorted_array, T*** bins, int** tally, int m) {
 
 int main(int argc, char const *argv[]) {
     srand(time(NULL));
-    omp_set_num_threads(16);
 
     // T arr[20] = {10, 18, 16, 14, 0, 17, 11, 2, 3, 9, 5, 7, 4, 19, 6, 15, 8, 1, 13, 12};
     // int n = 20;

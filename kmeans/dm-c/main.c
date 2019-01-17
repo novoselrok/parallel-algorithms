@@ -5,6 +5,7 @@
 #include <time.h>
 #include <string.h>
 #include <float.h>
+#include <stddef.h>
 
 #define POINT_SIZE 100
 #define MASTER 0
@@ -21,14 +22,19 @@ typedef struct _cluster_t {
 
 void create_cluster_mpi_datatype(MPI_Datatype* cluster_datatype) {
     cluster_t tmp_cluster;
+    MPI_Datatype tmp_type;
 
     int blocklen[3] = { POINT_SIZE, POINT_SIZE, 1 };
     MPI_Datatype type[3] = { MPI_DOUBLE, MPI_DOUBLE, MPI_INT };
     MPI_Aint disp[3];
-    disp[0] = 0;
-    disp[1] = POINT_SIZE * sizeof(double);
-    disp[2] = disp[1] + POINT_SIZE * sizeof(double);
-    MPI_Type_create_struct(3, blocklen, disp, type, cluster_datatype);
+    disp[0] = offsetof(cluster_t, sum);
+    disp[1] = offsetof(cluster_t, mean);
+    disp[2] = offsetof(cluster_t, count);
+    MPI_Type_create_struct(3, blocklen, disp, type, &tmp_type);
+
+    MPI_Aint lb, extent;
+    MPI_Type_get_extent(tmp_type, &lb, &extent);
+    MPI_Type_create_resized(tmp_type, lb, extent, cluster_datatype);
     MPI_Type_commit(cluster_datatype);
 }
 
@@ -107,6 +113,10 @@ int main(int argc, char** argv) {
     int k = atoi(argv[2]);
     int max_iter = atoi(argv[3]);
     int n_points = atoi(argv[4]);
+
+    double start_time, end_time;
+    MPI_Barrier(MPI_COMM_WORLD);
+    start_time = MPI_Wtime();
 
     int* sendcounts = malloc(world_size * sizeof(int));
     int* displs = malloc(world_size * sizeof(int));
@@ -251,7 +261,10 @@ int main(int argc, char** argv) {
         MPI_COMM_WORLD
     );
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    end_time = MPI_Wtime();
     if (rank == MASTER) {
+        printf("%f\n", end_time - start_time);
         print_labels("out.txt", labels, n_points);
     }
 
