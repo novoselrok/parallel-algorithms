@@ -8,6 +8,34 @@ int cmpfunc(const void *a, const void *b) {
    return *(T*)a - *(T*)b;
 }
 
+int partition(T* arr, int left, int right) {
+    int pivot = arr[right];
+    while (left < right) {
+      while (arr[left] < pivot) {
+        left++;
+      }
+      while (arr[right] > pivot) {
+        right--;
+      }
+      if (left <= right) {
+        int temp = arr[left];
+        arr[left] = arr[right];
+        arr[right] = temp;
+      }
+    }
+    return left; // pivot index
+}
+
+void myqsort(T* arr, int left, int right) {
+    if (left >= right) {
+        return;
+    }
+
+    int pivot_idx = partition(arr, left, right);
+    myqsort(arr, left, pivot_idx - 1);  // sort left of pivot
+    myqsort(arr, pivot_idx, right); // sort right of pivot
+}
+
 int main(int argc, char const *argv[]) {
     FILE* f;
     f = fopen(argv[1], "r");
@@ -26,9 +54,10 @@ int main(int argc, char const *argv[]) {
     fclose(f);
 
     clock_t begin = clock();
-    qsort(arr, n, sizeof(T), cmpfunc);
+    // qsort(arr, n, sizeof(T), cmpfunc);
+    myqsort(arr, 0, n - 1);
     clock_t end = clock();
-	printf("Time elapsed is %f seconds\n", (double)(end - begin) / CLOCKS_PER_SEC);
+	printf("%f\n", (double)(end - begin) / CLOCKS_PER_SEC);
 
     for (int i = 0; i < n - 1; i++) {
         if (arr[i] > arr[i + 1]) {
@@ -36,7 +65,5 @@ int main(int argc, char const *argv[]) {
             exit(1);
         }
     }
-    printf("Array sorted!\n");
-
     return 0;
 }

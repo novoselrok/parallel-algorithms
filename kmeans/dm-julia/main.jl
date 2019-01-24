@@ -39,8 +39,6 @@ end
 
 @everywhere function compute_local_labels_and_clusters(k::Int, points::SharedArray{Point}, labels::SharedArray{Int64}, clusters::Array{Cluster})
     local_indices = localindices(points)
-    # num_points = length(local_indices)
-    # labels = zeros(num_points)
     new_clusters = [Cluster() for _ in 1:k]
 
     for point_idx in local_indices
@@ -84,13 +82,12 @@ function main(args)
     end
 
     @inbounds for iter in 1:max_iter
-        futures = [@spawnat worker compute_local_labels_and_clusters(k, points, labels, clusters) for worker in workers()]
-        computed_new_clusters = [fetch(future) for future in futures]
+        tasks = @sync [@spawnat worker compute_local_labels_and_clusters(k, points, labels, clusters) for worker in workers()]
+        computed_new_clusters = [fetch(task) for task in tasks]
 
         new_clusters = sum(computed_new_clusters)
         [calc_mean(cluster) for cluster in new_clusters]
         clusters = new_clusters
-        # labels = vcat([local_labels for (local_labels, _) in computed]...)
     end
 
     println((time_ns() - start) / 1.0e9)

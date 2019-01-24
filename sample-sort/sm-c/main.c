@@ -14,6 +14,36 @@ int cmpfunc(const void *a, const void *b) {
    return *(T*)a - *(T*)b;
 }
 
+/// QuickSort
+int partition(T* arr, int left, int right) {
+    int pivot = arr[right];
+    while (left < right) {
+      while (arr[left] < pivot) {
+        left++;
+      }
+      while (arr[right] > pivot) {
+        right--;
+      }
+      if (left <= right) {
+        int temp = arr[left];
+        arr[left] = arr[right];
+        arr[right] = temp;
+      }
+    }
+    return left; // pivot index
+}
+
+void myqsort(T* arr, int left, int right) {
+    if (left >= right) {
+        return;
+    }
+
+    int pivot_idx = partition(arr, left, right);
+    myqsort(arr, left, pivot_idx - 1);  // sort left of pivot
+    myqsort(arr, pivot_idx, right); // sort right of pivot
+}
+///
+
 int get_number_of_bins() {
     int m;
     #pragma omp parallel 
@@ -28,14 +58,15 @@ void get_sample_keys(T* arr, int n, int m, T* sample_keys) {
     int total_sampled_keys = m * OVERSAMPLING_FACTOR;
     T* sampled_keys = (T*) malloc(sizeof(T) * total_sampled_keys);
     for (int i = 0; i < total_sampled_keys; i++) {
-        int idx = (int) ((rand() / (double) RAND_MAX) * n);
-        sampled_keys[i] = arr[idx];
+        // int idx = (int) ((rand() / (double) RAND_MAX) * n);
+        sampled_keys[i] = arr[i];
     }
 
     for (int i = 0; i < m - 1; i++) {
         sample_keys[i] = sampled_keys[(i + 1) * OVERSAMPLING_FACTOR];
     }
-    qsort(sample_keys, m - 1, sizeof(T), cmpfunc);
+    // qsort(sample_keys, m - 1, sizeof(T), cmpfunc);
+    myqsort(sample_keys, 0, m - 2);
 
     // Cleanup
     free(sampled_keys);
@@ -60,7 +91,6 @@ int binary_search(T* arr, int n, T el) {
 void map_keys_to_bins(T* arr, int n, int m, T* sample_keys, int* index, int* freq) {
     for (int i = 0; i < n; i++) {
         int bin_idx = binary_search(sample_keys, m - 1, arr[i]);
-        // printf("Key: %d, Bin idx: %d\n", arr[i], bin_idx);
         index[i] = bin_idx;
         freq[bin_idx] += 1;
     }
@@ -69,12 +99,7 @@ void map_keys_to_bins(T* arr, int n, int m, T* sample_keys, int* index, int* fre
 void bin(T* arr, int n, T*** bins, int** tally, int m) {
     T* sample_keys = (T*) malloc(sizeof(T) * (m - 1));
     get_sample_keys(arr, n, m, sample_keys);
-    
-    // for (int i = 0; i < m - 1; i++) {
-    //     printf("%d ", sample_keys[i]);
-    // }
-    // printf("\n");
-    
+
     int block_size = (int) (n + m - 1) / m;
     #pragma omp parallel
     {
@@ -122,17 +147,13 @@ void subsort(T* sorted_array, T*** bins, int** tally, int m) {
         for (int j = 0; j < m; j++) {
             col_sum[i] += tally[j][i];
         }
-        // printf("%d ", col_sum[i]);
     }
-    // printf("\n");
 
     int* prefix_col_sum = (int*) malloc(sizeof(int) * m);
     prefix_col_sum[0] = 0;
     for (int i = 1; i < m; i++) {
         prefix_col_sum[i] = prefix_col_sum[i - 1] + col_sum[i - 1];
-        // printf("%d ", prefix_col_sum[i]);
     }
-    // printf("\n");
 
     #pragma omp parallel
     {
@@ -147,23 +168,15 @@ void subsort(T* sorted_array, T*** bins, int** tally, int m) {
             offset += count;
         }
 
-        qsort(subarray, col_sum[thread_id], sizeof(T), cmpfunc);
-
-        // #pragma omp critical
-        // {
-        // printf("Thread id: %d\n", thread_id);
-        // for (int i = 0; i < col_sum[thread_id]; i++) {
-        //     printf("%d ", subarray[i]);
-        // }
-        // printf("\n");
-        // }
+        // qsort(subarray, col_sum[thread_id], sizeof(T), cmpfunc);
+        myqsort(subarray, 0, col_sum[thread_id] - 1);
 
         memcpy(&sorted_array[prefix_col_sum[thread_id]], subarray, sizeof(T) * col_sum[thread_id]);
     }
 }
 
 int main(int argc, char const *argv[]) {
-    srand(time(NULL));
+    // srand(1234);
 
     // T arr[20] = {10, 18, 16, 14, 0, 17, 11, 2, 3, 9, 5, 7, 4, 19, 6, 15, 8, 1, 13, 12};
     // int n = 20;
@@ -184,7 +197,6 @@ int main(int argc, char const *argv[]) {
     fclose(f);
 
     int m = get_number_of_bins();
-    printf("Number of bins: %d\n", m);
     double begin = omp_get_wtime();
     // 3D array containing keys (array elements) broken down into bins
     // Each thread owns #thread_id row when binning (1st phase)
@@ -206,30 +218,16 @@ int main(int argc, char const *argv[]) {
 
     bin(arr, n, bins, tally, m);
 
-    // for (int i = 0; i < m; i++) {
-    //     for (int j = 0; j < m; j++) {
-    //         T* bin = bins[i][j];
-    //         printf("[");
-    //         for (int k = 0; k < tally[i][j]; k++) {
-    //             printf("%d ", bin[k]);
-    //         }
-    //         printf("] ");
-    //     }
-    //     printf("\n");
-    // }
     T* sorted_array = (T*) malloc(sizeof(T) * n);
     subsort(sorted_array, bins, tally, m);
     printf("%.16g\n", omp_get_wtime() - begin);
 
     for (int i = 0; i < n - 1; i++) {
-        // printf("%d ", sorted_array[i]);
         if (sorted_array[i] > sorted_array[i + 1]) {
             printf("Array not sorted!\n");
             exit(1);
         }
     }
-    // printf("%d\n", sorted_array[n - 1]);
-    printf("Array sorted!\n");
 
     // Cleanup
     free(sorted_array);

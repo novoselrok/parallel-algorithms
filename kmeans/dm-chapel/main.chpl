@@ -1,6 +1,9 @@
 use Random;
 use Time;
 use BlockDist;
+use CyclicDist;
+use ReplicatedDist;
+use CommDiagnostics;
 
 /* Config variables */
 config const filename = "../data/test_10_10_2.chpl.txt";
@@ -10,7 +13,7 @@ config const maxIter = 10;
 config const numPoints = 10;
 
 /* Datatypes */
-type Point = 10 * real;
+type Point = 100 * real;
 
 record Cluster {
     var size: int;
@@ -59,19 +62,23 @@ proc +(ref c1: Cluster, c2: Cluster) {
 }
 
 proc main() {
+    // startVerboseComm();
     var pointsSpace = {0..#numPoints};
+    // Fake points array
+    var _points: [pointsSpace] Point;
     var pointsDomain = pointsSpace dmapped Block(boundingBox=pointsSpace);
     var points: [pointsDomain] Point;
     var labels: [pointsDomain] int;
     
-    var clustersDomain = {0..#k};
-    var clusters: [clustersDomain] Cluster;
+    var clustersSpace = {0..#k};
+    var clustersDomain = clustersSpace dmapped Replicated();
+    var clusters: [clustersDomain]  Cluster;
     
     /* Read input file */
     var f = open(filename, iomode.r);
     var reader = f.reader();
     for i in pointsDomain {
-        points[i] = reader.read(Point);
+        _points[i] = reader.read(Point);
     }
     f.close();
     reader.close();
@@ -79,44 +86,47 @@ proc main() {
     var watch: Timer;
     watch.start();
     /* Algorithm */
+    for i in pointsDomain {
+        points[i] = _points[i];
+    }
+
     var randStream = new owned RandomStream(real);
     for i in clustersDomain {
         var idx: int = (randStream.getNext() * numPoints):int;
         clusters[i] = new Cluster(points[idx]);
     }
 
-    for iteration in 0..#maxIter {
-        var newClustersPerLocale: [0..#numLocales][clustersDomain] Cluster;
-        coforall L in Locales {
-            on L {
-                const indices = points.localSubdomain();
-                for i in indices {
-                    // You have to be careful with tuples since they create copies
-                    ref point = points[i];
+    for L in Locales {
+        clusters.replicand(L) = clusters;
+    }
 
-                    var minIndex = 0;
-                    var minValue = Math.INFINITY;
-                    for (idx, cluster) in zip(clusters.domain, clusters) {
-                        var distance = cluster.distance(point);
-                        if (distance < minValue) {
-                            minValue = distance;
-                            minIndex = idx;
-                        }
-                    }
-                    
-                    labels[i] = minIndex;
-                    newClustersPerLocale[here.id][minIndex].addPoint(point);
+    for iteration in 0..#maxIter {
+        var newClustersPerLocale: [clustersDomain] Cluster;
+        forall (point, label_) in zip(points, labels) {
+            var minIndex = 0;
+            var minValue = Math.INFINITY;
+            for (idx, cluster) in zip(clusters.domain, clusters) {
+                var distance = cluster.distance(point);
+                if (distance < minValue) {
+                    minValue = distance;
+                    minIndex = idx;
                 }
             }
+            
+            label_ = minIndex;
+            newClustersPerLocale[minIndex].addPoint(point);
         }
-        var newClusters = + reduce newClustersPerLocale;
-        
+        var newClusters = + reduce [L in Locales] newClustersPerLocale.replicand(L);
         for cluster in newClusters {
             cluster.calcMean();
         }
         clusters = newClusters;
         
+        for L in Locales {
+            clusters.replicand(L) = clusters;
+        }
     }
+    // stopVerboseComm();
     writeln(watch.elapsed());
 
     // Output labels
@@ -127,4 +137,5 @@ proc main() {
     }
     writer.close();
     outf.close();
+
 }

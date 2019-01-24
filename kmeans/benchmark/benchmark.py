@@ -25,9 +25,8 @@ threads = [
 ]
 
 nclusters = [
-    32,
-    64,
-    128
+    256,
+    512
 ]
 
 prefixes = [
