@@ -137,10 +137,7 @@ function subsort(bins::BINS_TYPE, nkeys::Int, m::Int)
     sorted_subarrays
 end
 
-function main(args)
-    # Random.seed!(1234)
-    # arr = [10, 18, 16, 14, 0, 17, 11, 2, 3, 9, 5, 7, 4, 19, 6, 15, 8, 1, 13, 12]
-    # nbins = 2
+function main(args, verbose::Bool)
     arr = convert(Array{Int, 1}, readdlm(args[1])[:, 1])
     nbins = nthreads()
     
@@ -149,7 +146,7 @@ function main(args)
     @inbounds bins = bin(arr, nbins)
     @inbounds sorted_array = subsort(bins, length(arr), nbins)
     
-    println((time_ns() - start) / 1.0e9)
+    verbose && println((time_ns() - start) / 1.0e9)
 
     for i in 1:length(sorted_array) - 1
         if sorted_array[i] > sorted_array[i + 1]
@@ -159,4 +156,10 @@ function main(args)
     end
 end
 
-main(ARGS)
+nprecompilesteps = 3
+verbose = false
+for i in 1:nprecompilesteps
+    main(ARGS, verbose)
+end
+verbose = true
+main(ARGS, verbose)

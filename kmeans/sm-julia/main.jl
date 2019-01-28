@@ -58,7 +58,7 @@ function compute_label_for_point(index::Int, points::Array{Point}, clusters::Arr
     add_point(clusters_per_thread[thread_id][min_index], point)
 end
 
-function main(args)
+function main(args, verbose::Bool)
     # Configuration
     filename = args[1]
     out_filename = "out.txt"
@@ -91,9 +91,16 @@ function main(args)
         [calc_mean(cluster) for cluster in new_clusters]
         clusters = new_clusters
     end
-    
-    println((time_ns() - start) / 1.0e9)
+
+    verbose && println((time_ns() - start) / 1.0e9)
+
     writedlm("out.txt", labels)
 end
 
-main(ARGS)
+nprecompilesteps = 3
+verbose = false
+for i in 1:nprecompilesteps
+    main(ARGS, verbose)
+end
+verbose = true
+main(ARGS, verbose)
