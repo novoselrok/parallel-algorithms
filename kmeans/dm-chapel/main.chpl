@@ -64,8 +64,6 @@ proc +(ref c1: Cluster, c2: Cluster) {
 proc main() {
     // startVerboseComm();
     var pointsSpace = {0..#numPoints};
-    // Fake points array
-    var _points: [pointsSpace] Point;
     var pointsDomain = pointsSpace dmapped Block(boundingBox=pointsSpace);
     var points: [pointsDomain] Point;
     var labels: [pointsDomain] int;
@@ -78,7 +76,7 @@ proc main() {
     var f = open(filename, iomode.r);
     var reader = f.reader();
     for i in pointsDomain {
-        _points[i] = reader.read(Point);
+        points[i] = reader.read(Point);
     }
     f.close();
     reader.close();
@@ -86,9 +84,6 @@ proc main() {
     var watch: Timer;
     watch.start();
     /* Algorithm */
-    for i in pointsDomain {
-        points[i] = _points[i];
-    }
 
     var randStream = new owned RandomStream(real);
     for i in clustersDomain {

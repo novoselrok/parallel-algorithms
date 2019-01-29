@@ -114,10 +114,6 @@ int main(int argc, char** argv) {
     int max_iter = atoi(argv[3]);
     int n_points = atoi(argv[4]);
 
-    double start_time, end_time;
-    MPI_Barrier(MPI_COMM_WORLD);
-    start_time = MPI_Wtime();
-
     int* sendcounts = malloc(world_size * sizeof(int));
     int* displs = malloc(world_size * sizeof(int));
     int* recvcounts = malloc(world_size * sizeof(int));
@@ -151,11 +147,6 @@ int main(int argc, char** argv) {
             }
         }
         fclose(f);
-
-        for (int i = 0; i < k; i++) {
-            int idx = (int) ((rand() / (double) RAND_MAX) * n_points);
-            set_cluster_mean(&clusters[i], points[idx]);
-        }
     }
 
     MPI_Scatterv(
@@ -171,6 +162,17 @@ int main(int argc, char** argv) {
 
         MPI_COMM_WORLD
     );
+
+    double start_time, end_time;
+    MPI_Barrier(MPI_COMM_WORLD);
+    start_time = MPI_Wtime();
+
+    if (rank == MASTER) {
+        for (int i = 0; i < k; i++) {
+            int idx = (int) ((rand() / (double) RAND_MAX) * n_points);
+            set_cluster_mean(&clusters[i], points[idx]);
+        }
+    }
 
     MPI_Bcast(
         clusters,
