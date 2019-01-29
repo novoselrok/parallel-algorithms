@@ -137,7 +137,7 @@ function subsort(bins::BINS_TYPE, nkeys::Int, m::Int)
     sorted_subarrays
 end
 
-function main(args, verbose::Bool)
+function main(args)
     arr = convert(Array{Int, 1}, readdlm(args[1])[:, 1])
     nbins = nthreads()
     
@@ -146,7 +146,7 @@ function main(args, verbose::Bool)
     @inbounds bins = bin(arr, nbins)
     @inbounds sorted_array = subsort(bins, length(arr), nbins)
     
-    verbose && println((time_ns() - start) / 1.0e9)
+    elapsed = (time_ns() - start) / 1.0e9
 
     for i in 1:length(sorted_array) - 1
         if sorted_array[i] > sorted_array[i + 1]
@@ -154,12 +154,12 @@ function main(args, verbose::Bool)
             exit(1)
         end
     end
+    elapsed
 end
 
-nprecompilesteps = 3
-verbose = false
+nprecompilesteps = haskey(ENV, "JL_NRETRIES") ? parse(Int, ENV["JL_NRETRIES"]) : 0
+times = []
 for i in 1:nprecompilesteps
-    main(ARGS, verbose)
+    push!(times, main(ARGS))
 end
-verbose = true
-main(ARGS, verbose)
+println(minimum(times))

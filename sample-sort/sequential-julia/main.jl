@@ -32,13 +32,13 @@ function myqsort(arr::Array{Int})
     @inbounds myqsort(arr, 1, length(arr))
 end
 
-function main(args, verbose::Bool)
+function main(args)
     # arr = [10, 18, 16, 14, 0, 17, 11, 2, 3, 9, 5, 7, 4, 19, 6, 15, 8, 1, 13, 12]
     arr = convert(Array{Int, 1}, readdlm(args[1])[:, 1])
 
     start = time_ns()
     myqsort(arr)
-    verbose && println((time_ns() - start) / 1.0e9)
+    elapsed = ((time_ns() - start) / 1.0e9)
 
     for i in 1:length(arr) - 1
         if arr[i] > arr[i + 1]
@@ -46,12 +46,12 @@ function main(args, verbose::Bool)
             exit(1)
         end
     end
+    elapsed
 end
 
-nprecompilesteps = 3
-verbose = false
+nprecompilesteps = haskey(ENV, "JL_NRETRIES") ? parse(Int, ENV["JL_NRETRIES"]) : 0
+times = []
 for i in 1:nprecompilesteps
-    main(ARGS, verbose)
+    push!(times, main(ARGS))
 end
-verbose = true
-main(ARGS, verbose)
+println(minimum(times))

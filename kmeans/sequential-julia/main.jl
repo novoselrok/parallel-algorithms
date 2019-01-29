@@ -45,7 +45,7 @@ function compute_label_for_point(index::Int, points::Array{Point}, clusters::Arr
     add_point(new_clusters[min_index], point)
 end
 
-function main(args, verbose::Bool)
+function main(args)
     # Configuration
     filename = args[1]
     out_filename = "out.txt"
@@ -76,15 +76,15 @@ function main(args, verbose::Bool)
         clusters = new_clusters
     end
 
-    verbose && println((time_ns() - start) / 1.0e9)
+    elapsed = println((time_ns() - start) / 1.0e9)
 
     writedlm("out.txt", labels)
+    elapsed
 end
 
-nprecompilesteps = 3
-verbose = false
+nprecompilesteps = haskey(ENV, "JL_NRETRIES") ? parse(Int, ENV["JL_NRETRIES"]) : 0
+times = []
 for i in 1:nprecompilesteps
-    main(ARGS, verbose)
+    push!(times, main(ARGS))
 end
-verbose = true
-main(ARGS, verbose)
+println(minimum(times))
