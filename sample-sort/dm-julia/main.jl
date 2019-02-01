@@ -86,32 +86,25 @@ end
     bins
 end
 
-function bin(arr::SharedArray{Int}, m::Int)
-    sample_keys = get_sample_keys(arr, m)
-    tasks = @sync [@spawnat worker compute_bin_array(arr, sample_keys, m) for worker in workers()]
-    [fetch(task) for task in tasks]
-end
-
-@everywhere function compute_sorted_subarray(subarray::Array{Int,1})
+@everywhere function bin_subsort(arr::SharedArray{Int}, sample_keys::Array{Int,1}, m::Int, channels::Array{RemoteChannel{Channel{Array{Int64,1}}},1})
+    workerid = myid() - 1
+    bins = compute_bin_array(arr, sample_keys, m)
+    
+    for (idx, channel) in enumerate(channels)
+        if idx == workerid
+            continue
+        end
+        put!(channel, bins[idx])
+    end
+    subarray::Array{Int,1} = bins[workerid]
+    received_arrays = m - 1
+    while received_arrays > 0
+        received_array = take!(channels[workerid])
+        subarray = vcat(subarray, received_array)
+        received_arrays -= 1
+    end
     myqsort(subarray)
     subarray
-end
-
-function subsort(bins::BINS_TYPE, nkeys::Int, m::Int)::Array{Int,1}
-    subarrays::BINS_TYPE = []
-
-    for i in 1:m
-        subarray::Array{Int,1} = []
-        for j in i:m:length(bins)
-            subarray = vcat(subarray, bins[j])
-        end
-        push!(subarrays, subarray)
-    end
-
-    # To lahk pustimo ker itak mormo nov array nardit
-    @sync @distributed (vcat) for i in 1:m
-        compute_sorted_subarray(subarrays[i])
-    end
 end
 
 function main(args)
@@ -120,16 +113,29 @@ function main(args)
     nbins = nworkers()
     
     start = time_ns()
-    @time @inbounds bins = bin(arr, nbins)
-    # @time @inbounds sorted_array = subsort(bins, length(arr), nbins)
-    println((time_ns() - start) / 1.0e9)
+    sample_keys = get_sample_keys(arr, nbins)
+    channels = [RemoteChannel(()->Channel{Array{Int,1}}(nbins)) for _ in 1:nworkers()]
 
-    # for i in 1:length(sorted_array) - 1
-    #     if sorted_array[i] > sorted_array[i + 1]
-    #         println("Array not sorted.")
-    #         exit(1)
-    #     end
-    # end
+    sorted_array = @sync @distributed (vcat) for i in 1:nbins
+        bin_subsort(arr, sample_keys, nbins, channels)
+    end
+
+    elapsed = (time_ns() - start) / 1.0e9
+
+    for i in 1:length(sorted_array) - 1
+        if sorted_array[i] > sorted_array[i + 1]
+            println("Array not sorted.")
+            exit(1)
+        end
+    end
+    elapsed
 end
 
-main(ARGS)
+nprecompilesteps = haskey(ENV, "JL_NRETRIES") ? parse(Int, ENV["JL_NRETRIES"]) : 0
+times = []
+for i in 1:nprecompilesteps
+    push!(times, main(ARGS))
+    println(times)
+    sleep(1)
+end
+println(minimum(times))
