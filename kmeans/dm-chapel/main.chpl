@@ -62,7 +62,6 @@ proc +(ref c1: Cluster, c2: Cluster) {
 }
 
 proc main() {
-    // startVerboseComm();
     var pointsSpace = {0..#numPoints};
     var pointsDomain = pointsSpace dmapped Block(boundingBox=pointsSpace);
     var points: [pointsDomain] Point;
@@ -94,7 +93,7 @@ proc main() {
     for L in Locales {
         clusters.replicand(L) = clusters;
     }
-
+    var localesSpace = {0..#numLocales};
     for iteration in 0..#maxIter {
         var newClustersPerLocale: [clustersDomain] Cluster;
         forall (point, label_) in zip(points, labels) {
@@ -107,11 +106,17 @@ proc main() {
                     minIndex = idx;
                 }
             }
-            
+
             label_ = minIndex;
             newClustersPerLocale[minIndex].addPoint(point);
         }
-        var newClusters = + reduce [L in Locales] newClustersPerLocale.replicand(L);
+
+        var newClustersGathered: [localesSpace][clustersSpace] Cluster;
+        for (i, L) in zip(localesSpace, Locales) {
+            newClustersGathered[i] = newClustersPerLocale.replicand(L);
+        }
+
+        var newClusters = + reduce newClustersGathered;
         for cluster in newClusters {
             cluster.calcMean();
         }
@@ -121,7 +126,6 @@ proc main() {
             clusters.replicand(L) = clusters;
         }
     }
-    // stopVerboseComm();
     writeln(watch.elapsed());
 
     // Output labels
@@ -132,5 +136,4 @@ proc main() {
     }
     writer.close();
     outf.close();
-
 }

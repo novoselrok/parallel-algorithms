@@ -90,8 +90,14 @@ function main(args)
         clusters = new_clusters
     end
 
-    println((time_ns() - start) / 1.0e9)
+    elapsed = (time_ns() - start) / 1.0e9
     writedlm("out.txt", labels)
+    elapsed
 end
 
-main(ARGS)
+nprecompilesteps = haskey(ENV, "JL_NRETRIES") ? parse(Int, ENV["JL_NRETRIES"]) : 0
+times = []
+for i in 1:nprecompilesteps
+    push!(times, main(ARGS))
+end
+println(minimum(times))
