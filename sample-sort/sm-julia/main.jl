@@ -2,7 +2,7 @@ using Base.Threads
 using DelimitedFiles
 using Random
 
-const OVERSAMPLING_FACTOR = 64
+const OVERSAMPLING_FACTOR = 128
 const BINS_TYPE = Array{Array{Array{Int,1},1},1}
 
 ### QuickSort

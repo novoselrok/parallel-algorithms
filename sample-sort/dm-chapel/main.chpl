@@ -2,12 +2,13 @@ use Sort;
 use Random;
 use Time;
 use BlockDist;
+use ReplicatedDist;
 use CommDiagnostics;
 
 config const filename = "../data/arr10.txt";
 config const nkeys = 10;
 
-const OVERSAMPLING_FACTOR = 1;
+const OVERSAMPLING_FACTOR = 128;
 
 /// QuickSort
 proc partition(arr: [] int, left_: int, right_: int) {
@@ -54,8 +55,7 @@ class BinArray {
     }
 }
 
-proc getSampleKeys(arr: [] int, m: int) {
-    var sampleKeys: [0..#m-1] int;
+proc getSampleKeys(sampleKeys: [] int, arr: [] int, m: int) {
     var sampledKeys: [0..#m*OVERSAMPLING_FACTOR] int;
 
     // var randStream = new owned RandomStream(real, 1234);
@@ -69,7 +69,6 @@ proc getSampleKeys(arr: [] int, m: int) {
     }
     
     myqsort(sampleKeys);
-    return sampleKeys;
 }
 
 proc binarySearch(arr: [] int, el: int) {
@@ -95,62 +94,6 @@ proc mapKeysToBins(arr: [] int, sampleKeys: [] int, m: int) {
     return index_;
 }
 
-proc bin(arr: [] int, m: int, bins: [{0..#m}][{0..#m}] unmanaged BinArray) {
-    var sampleKeys = getSampleKeys(arr, m);
-    var blockSize = ((nkeys + m - 1) / m):int;
-
-    forall threadId in 0..#m {
-        var start = threadId * blockSize;
-        var end = min(start + blockSize, nkeys);
-        var subarraySize = end - start;
-        var subarrayDomain = 0..#subarraySize;
-        var subarray = arr[start..end-1].reindex(subarrayDomain);
-
-        var index_ = mapKeysToBins(subarray, sampleKeys, m);
-        for i in subarrayDomain {
-            var binIdx = index_[i];
-            bins[threadId][binIdx].push(arr[start + i]);
-        }
-    }
-
-    return bins;
-}
-
-proc subsort(m: int, bins: [{0..#m}][{0..#m}] unmanaged BinArray) {
-    var sortedArray: [0..#nkeys] int;
-    var colSum: [0..#m] int;
-    var prefixColSum: [0..#m] int;
-
-    for i in 0..#m {
-        for j in 0..#m {
-            var binSize = bins[j][i].arr.size;
-            colSum[i] += binSize;
-        }
-    }
-
-    for i in 1..#m-1 {
-        prefixColSum[i] = prefixColSum[i - 1] + colSum[i - 1];
-    }
-
-    forall threadId in 0..#m {
-        var subarray: [0..#colSum[threadId]] int;
-
-        var offset = 0;
-        for i in 0..#m {
-            var binArray = bins[i][threadId];
-            var size = binArray.arr.size;
-            subarray[offset..offset+size-1] = binArray.arr;
-            offset += size;
-        }
-        myqsort(subarray);
-
-        var start = prefixColSum[threadId];
-        var end = start + colSum[threadId];
-        sortedArray[start..end-1] = subarray;
-    }
-    return sortedArray;
-}
-
 proc computeBins(arr: [] int, sampleKeys: [] int, m: int) {
     var bins: [{0..#m}] unmanaged BinArray;
     for i in bins.domain {
@@ -158,24 +101,33 @@ proc computeBins(arr: [] int, sampleKeys: [] int, m: int) {
     }
 
     var localSubdomain = arr.localSubdomain();
-    var index_ = mapKeysToBins(arr[localSubdomain], sampleKeys, m);
-    for (binIdx, key) in zip(index_, arr[localSubdomain]) {
+    var subarray = arr.localSlice(localSubdomain);
+    var index_ = mapKeysToBins(subarray, sampleKeys, m);
+    for (binIdx, key) in zip(index_, subarray) {
         bins[binIdx].push(key);
     }
     return bins;
 }
 
 proc main() {
-    startVerboseComm();
     var keysSpace = {0..#nkeys};
     var keysDomain = keysSpace dmapped Block(boundingBox=keysSpace);
     var arr: [keysDomain] int;
     var nbins = numLocales;
 
-    var f = open(filename, iomode.r);
-    var reader = f.reader();
-    reader.read(arr);
-    f.close();
+    coforall L in Locales do on L {
+        var f = open(filename, iomode.r);
+        var reader = f.reader();
+        var localSubdomain = arr.localSubdomain();
+        var i = 0;
+        while i < localSubdomain.low {
+            reader.read(int);
+            i += 1;
+        }
+        reader.read(arr[localSubdomain]);
+        reader.close();
+        f.close();
+    }
 
     var binsLocaleView = {0..0, 0..#nbins};
     var binsLocales: [binsLocaleView] locale = reshape(Locales, binsLocaleView);
@@ -184,34 +136,34 @@ proc main() {
     var binsDomain = binsSpace dmapped Block(boundingBox=binsSpace, targetLocales=binsLocales);
     var bins: [binsDomain] unmanaged BinArray;
 
-    writeln("read array");
     var watch: Timer;
     watch.start();
 
-    var sampleKeys = getSampleKeys(arr, nbins); // Replicate domain
+    var sampleKeysDomain = {0..#nbins-1} dmapped Replicated();
+    var sampleKeys: [sampleKeysDomain] int;
+    getSampleKeys(sampleKeys, arr, nbins);
 
-    coforall L in Locales {
-        on L {
-            var binsRow = computeBins(arr, sampleKeys, nbins);
-            writeln(L, " done");
-            for i in binsRow.domain {
-                bins[here.id, i] = binsRow[i];
-            }
+    for L in Locales {
+        sampleKeys.replicand(L) = sampleKeys;
+    }
+
+    coforall L in Locales do on L {
+        var binsRow = computeBins(arr, sampleKeys, nbins);
+        for i in binsRow.domain {
+            bins[here.id, i] = binsRow[i];
         }
     }
 
     var sortedArray: [0..-1] int;
     var sortedSubarrays: [0..#numLocales] unmanaged BinArray;
-    coforall L in Locales {
-        on L {
-            var subarray: [0..-1] int;
-            for i in 0..#nbins {
-                subarray.push_back(bins[i, here.id].arr);
-            }
-            myqsort(subarray);
-            sortedSubarrays[here.id] = new unmanaged BinArray();
-            sortedSubarrays[here.id].arr.push_back(subarray);
+    coforall L in Locales do on L {
+        var subarray: [0..-1] int;
+        for i in 0..#nbins {
+            subarray.push_back(bins[i, here.id].arr);
         }
+        myqsort(subarray);
+        sortedSubarrays[here.id] = new unmanaged BinArray();
+        sortedSubarrays[here.id].arr.push_back(subarray);
     }
 
     for sub in sortedSubarrays {
@@ -219,7 +171,6 @@ proc main() {
     }
 
     writeln(watch.elapsed());
-    stopVerboseComm();
     if !isSorted(sortedArray) {
         writeln("Array not sorted!");
     }

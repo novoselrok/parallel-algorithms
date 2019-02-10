@@ -2,7 +2,7 @@ using Distributed
 using DelimitedFiles
 @everywhere using SharedArrays
 
-const OVERSAMPLING_FACTOR = 1
+const OVERSAMPLING_FACTOR = 128
 const BINS_TYPE = Array{Array{Int,1},1}
 
 ### QuickSort

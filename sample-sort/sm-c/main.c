@@ -5,7 +5,7 @@
 #include <time.h>
 #include <string.h>
 
-#define OVERSAMPLING_FACTOR 64
+#define OVERSAMPLING_FACTOR 128
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
 typedef int T;

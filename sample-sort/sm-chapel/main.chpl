@@ -5,7 +5,7 @@ use Time;
 config const filename = "../data/arr10.txt";
 config const nkeys = 10;
 
-const OVERSAMPLING_FACTOR = 64;
+const OVERSAMPLING_FACTOR = 128;
 
 /// QuickSort
 proc partition(arr: [] int, left_: int, right_: int) {
