@@ -20,7 +20,5 @@ Body(id::Int, position::Vec3, velocity::Vec3, mass::Float64) = Body(
 )
 
 function reset_force(body::Body)
-    body.force[X] = 0.0
-    body.force[Y] = 0.0
-    body.force[Z] = 0.0
+    body.force = Vec3(0.0, 0.0, 0.0)
 end

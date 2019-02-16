@@ -49,20 +49,26 @@ function insert_body(cell::Cell, body::Body)
         cell.body = body
         cell.mass = body.mass
         cell.cm = copy(body.position)
-        cell.body_present =  true
+        cell.body_present = true
     else
         if is_external(cell)
+            half_sides = Vec3([(cell.max_bounds[c] - cell.min_bounds[c]) / 2 for c in 1:DIMS])
             for i in 1:N_CELL_CHILDREN
                 child = Cell()
                 cell.children[i] = child
 
-                # Find the bounds of the child
-                for c in 1:DIMS
-                    half_side = (cell.max_bounds[c] - cell.min_bounds[c]) / 2
-                    shift::Int = ((i - 1) >> (c - 1)) & 1
-                    child.min_bounds[c] = cell.min_bounds[c] + (shift * half_side)
-                    child.max_bounds[c] = cell.max_bounds[c] - ((1 - shift) * half_side)
-                end
+                shifts = Vec3([((i - 1) >> (c - 1)) & 1 for c in 1:DIMS])
+                child.min_bounds = Vec3(
+                    cell.min_bounds[X] + (shifts[X] * half_sides[X]),
+                    cell.min_bounds[Y] + (shifts[Y] * half_sides[Y]),
+                    cell.min_bounds[Z] + (shifts[Z] * half_sides[Z])
+                )
+
+                child.max_bounds = Vec3(
+                    cell.max_bounds[X] - ((1 - shifts[X]) * half_sides[X]),
+                    cell.max_bounds[Y] - ((1 - shifts[Y]) * half_sides[Y]),
+                    cell.max_bounds[Z] - ((1 - shifts[Z]) * half_sides[Z])
+                )
 
                 # Insert old body
                 if (cell.body_present && cell_contains_position(child, cell.body.position))
@@ -82,9 +88,11 @@ function insert_body(cell::Cell, body::Body)
         end
 
         # Update mass and center of mass of the cell
-        for c in 1:DIMS
-            cell.cm[c] = (cell.mass * cell.cm[c] + body.mass * body.position[c]) / (cell.mass + body.mass)
-        end
+        cell.cm = Vec3(
+            (cell.mass * cell.cm[X] + body.mass * body.position[X]) / (cell.mass + body.mass),
+            (cell.mass * cell.cm[Y] + body.mass * body.position[Y]) / (cell.mass + body.mass),
+            (cell.mass * cell.cm[Z] + body.mass * body.position[Z]) / (cell.mass + body.mass)
+        )
         cell.mass += body.mass
     end
 end
@@ -98,9 +106,7 @@ function add_force(body::Body, position::Vec3, mass::Float64)::Nothing
     dist_cubed::Float64 = dist * dist * dist
     f::Float64 = (-G * body.mass * mass) / dist_cubed
 
-    body.force[X] += f * dx;
-    body.force[Y] += f * dy;
-    body.force[Z] += f * dz;
+    body.force = body.force + Vec3(f * dx, f * dy, f * dz)
     nothing
 end
 
@@ -113,10 +119,7 @@ end
     if is_external(cell)
         @inbounds add_force(body, cell_body.position, cell_body.mass)
     else
-        dx::Float64 = cell.max_bounds[X] - cell.min_bounds[X]
-        dy::Float64 = cell.max_bounds[Y] - cell.min_bounds[Y]
-        dz::Float64 = cell.max_bounds[Z] - cell.min_bounds[Z]
-        size::Float64 = dx + dy + dz
+        size::Float64 = sum(cell.max_bounds .- cell.min_bounds)
         d::Float64 = distance(cell.cm, body.position)
         
         if size / d < THETA
@@ -124,7 +127,7 @@ end
             @inbounds add_force(body, cell.cm, cell.mass)
         else
             for child in cell.children
-                compute_force(child::Cell, body::Body)
+                @inbounds compute_force(child::Cell, body::Body)
             end
         end
     end

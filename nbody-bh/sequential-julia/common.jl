@@ -6,7 +6,7 @@ const Z = 3
 
 const DIMS = 3
 
-const Vec3 = MVector{DIMS, Float64}
+const Vec3 = SVector{DIMS, Float64}
 
 const THETA = 0.5
 

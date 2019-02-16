@@ -56,17 +56,12 @@ function main(args)
         end
         
         @time for body in bodies
-            compute_force(root, body)
+            @inbounds compute_force(root, body)
         end
 
         @time for body in bodies
-            body.position[X] += dt * body.velocity[X];
-            body.position[Y] += dt * body.velocity[Y];
-            body.position[Z] += dt * body.velocity[Z];
-
-            body.velocity[X] += dt / body.mass * body.force[X];
-            body.velocity[Y] += dt / body.mass * body.force[Y];
-            body.velocity[Z] += dt / body.mass * body.force[Z];
+            body.position = body.position .+ (dt .* body.velocity)
+            body.velocity = body.velocity .+ (dt ./ body.mass .* body.force)
         end
     end
     elapsed = (time_ns() - start) / 1.0e9
