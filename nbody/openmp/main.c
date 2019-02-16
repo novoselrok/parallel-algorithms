@@ -17,7 +17,7 @@ int main(int argc, char const *argv[]) {
         printf("Not enough arguments: ./main <filename> <nbodies> <iterations> <output file>\n");
         exit(1);
     }
-    int num_threads = 16;
+    int num_threads = 2;
     omp_set_num_threads(num_threads);
     /* Read initial position, velocity and mass of the bodies */
     FILE* f;

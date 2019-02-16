@@ -4,3 +4,8 @@ main
 *.txt
 *.json
 main_real
+
+!sample-sort/benchmark/results.json
+
+cmake-build-debug
+.idea

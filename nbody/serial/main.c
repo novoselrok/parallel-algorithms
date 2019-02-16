@@ -25,12 +25,10 @@ int main(int argc, char const *argv[]) {
         printf("File does not exist.\n");
         exit(1);
     }
-    int iterations = atoi(argv[2]);
+    int n_bodies = atoi(argv[2]);
+    int iterations = atoi(argv[3]);
 
     char str[MAX_LINE_LENGTH];
-    fgets(str, MAX_LINE_LENGTH, f);
-    int n_bodies;
-    sscanf(str, "%d", &n_bodies);
 
     vect3_t* forces = malloc(n_bodies * sizeof(vect3_t));
     vect3_t* positions = malloc(n_bodies * sizeof(vect3_t));
@@ -53,7 +51,7 @@ int main(int argc, char const *argv[]) {
         masses[i] = mass;
     }
     printf("Done...\n");
-    time_t start = time(NULL);
+    clock_t begin = clock();
     double dt = 0.1;
     for (int i = 0; i < iterations; i++) {
         // Reset forces
@@ -102,10 +100,11 @@ int main(int argc, char const *argv[]) {
         // }
         // printf("\n===\n");
     }
-    printf("Time: %.2f\n", (double)(time(NULL) - start));
-
+    clock_t end = clock();
+    printf("%f\n", (double)(end - begin) / CLOCKS_PER_SEC);
+    
     FILE* outf;
-    outf = fopen(argv[3], "w");
+    outf = fopen("out.txt", "w");
     if(outf == NULL) {
         printf("Could not open output file.\n");
         exit(1);
