@@ -83,6 +83,7 @@ function main(args)
     elapsed
 end
 
+main(ARGS)
 # println(ARGS)
 # nprecompilesteps = haskey(ENV, "JL_NRETRIES") ? parse(Int, ENV["JL_NRETRIES"]) : 0
 # times = []

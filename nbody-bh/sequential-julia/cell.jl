@@ -1,6 +1,8 @@
 include("common.jl")
 include("body.jl")
 
+import Base: @propagate_inbounds
+
 const N_CELL_CHILDREN = 8
 
 mutable struct Cell
@@ -102,7 +104,7 @@ function add_force(body::Body, position::Vec3, mass::Float64)::Nothing
     nothing
 end
 
-function compute_force(cell::Cell, body::Body)::Nothing
+@propagate_inbounds function compute_force(cell::Cell, body::Body)::Nothing
     cell_body::Body = cell.body
     if (cell.body_present && cell_body.id === body.id) || cell.mass === 0.0
         return
@@ -122,7 +124,7 @@ function compute_force(cell::Cell, body::Body)::Nothing
             @inbounds add_force(body, cell.cm, cell.mass)
         else
             for child in cell.children
-                @inbounds compute_force(child::Cell, body::Body)
+                compute_force(child::Cell, body::Body)
             end
         end
     end
