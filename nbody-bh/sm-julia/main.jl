@@ -4,6 +4,9 @@ include("cell.jl")
 
 using DelimitedFiles
 using StaticArrays
+using Base.Threads
+
+const LEVEL = 2
 
 function get_universe_size(bodies::Array{Body})::Tuple{Vec3, Vec3}
     universe_min = [Inf, Inf, Inf]
@@ -23,6 +26,14 @@ function get_universe_size(bodies::Array{Body})::Tuple{Vec3, Vec3}
     (Vec3(universe_min), Vec3(universe_max))
 end
 
+function compute_leaf(leaf::Cell, bodies::Array{Body})
+    for body in bodies
+        if cell_contains_position(leaf, body.position)
+            insert_body(leaf, body)
+        end
+    end
+end
+
 function main(args)
     fname = args[1]
     iterations = parse(Int64, args[2])
@@ -40,6 +51,7 @@ function main(args)
 
     start = time_ns()
     dt = 0.1
+    n_leaves::Int = N_CELL_CHILDREN ^ LEVEL
     for iter in 1:iterations
         (universe_min, universe_max) = get_universe_size(bodies)
 
@@ -51,15 +63,20 @@ function main(args)
         root.min_bounds = universe_min
         root.max_bounds = universe_max
 
-        for body in bodies
-            insert_body(root, body)
+        construct_empty_tree(root, LEVEL)
+        leaves = get_leaves(root, LEVEL)
+
+        @threads for leaf in leaves
+            compute_leaf(leaf, bodies)
         end
-        
-        for body in bodies
+
+        update_empty_cells(root, LEVEL)
+
+        @threads for body in bodies
             @inbounds compute_force(root, body)
         end
 
-        for body in bodies
+        @threads for body in bodies
             body.position = body.position .+ (dt .* body.velocity)
             body.velocity = body.velocity .+ (dt ./ body.mass .* body.force)
         end

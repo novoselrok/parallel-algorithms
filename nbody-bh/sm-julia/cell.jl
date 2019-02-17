@@ -31,6 +31,62 @@ function is_external(cell::Cell)
     !cell.cell_opened
 end
 
+function init_cell_bounds_from_parent(parent::Cell, child::Cell, half_sides::Vec3, child_idx::Int)
+    shifts = Vec3([((child_idx - 1) >> (c - 1)) & 1 for c in 1:DIMS])
+    child.min_bounds = parent.min_bounds .+ (shifts .* half_sides)
+    child.max_bounds = parent.max_bounds .- ((1 .- shifts) .* half_sides)
+end
+
+construct_empty_tree(cell::Cell, max_level::Int) = construct_empty_tree(cell, 0, max_level)
+
+function construct_empty_tree(cell::Cell, current_level::Int, max_level::Int)
+    current_level === max_level && return
+    cell.cell_opened = true
+    half_sides = (cell.max_bounds .- cell.min_bounds) ./ 2
+    for i in 1:N_CELL_CHILDREN
+        child = Cell()
+        cell.children[i] = child
+        init_cell_bounds_from_parent(cell, child, half_sides, i)
+        construct_empty_tree(child, current_level + 1, max_level)
+    end
+end
+
+get_leaves(cell::Cell, max_level::Int) = get_leaves(cell, Array{Cell}([]), 0, max_level)
+
+function get_leaves(cell::Cell, leaves::Array{Cell}, current_level::Int, max_level::Int)::Array{Cell}
+    if current_level === max_level - 1
+        for child in cell.children
+            push!(leaves, child)
+        end
+    else
+        for child in cell.children
+            get_leaves(child, leaves, current_level + 1, max_level)
+        end
+    end
+    leaves
+end
+
+update_empty_cells(cell::Cell, max_level::Int) = update_empty_cells(cell, 0, max_level)
+
+function update_empty_cells(cell::Cell, current_level::Int, max_level::Int)
+    current_level === max_level && return
+
+    for child in cell.children
+        update_empty_cells(child, current_level + 1, max_level)
+    end
+
+    mass = 0.0
+    for child in cell.children
+        mass += child.mass
+
+        combined_mass = cell.mass + child.mass
+        combined_mass === 0.0 && continue
+
+        cell.cm = (cell.mass .* cell.cm .+ child.mass .* child.cm) ./ combined_mass
+    end
+    cell.mass = mass
+end
+
 function cell_contains_position(cell::Cell, position::Vec3)
     if position[X] < cell.min_bounds[X] || position[X] > cell.max_bounds[X]
         return false
@@ -56,10 +112,7 @@ function insert_body(cell::Cell, body::Body)
             for i in 1:N_CELL_CHILDREN
                 child = Cell()
                 cell.children[i] = child
-
-                shifts = Vec3([((i - 1) >> (c - 1)) & 1 for c in 1:DIMS])
-                child.min_bounds = cell.min_bounds .+ (shifts .* half_sides)
-                child.max_bounds = cell.max_bounds .- ((1 .- shifts) .* half_sides)
+                init_cell_bounds_from_parent(cell, child, half_sides, i)
 
                 # Insert old body
                 if (cell.body_present && cell_contains_position(child, cell.body.position))
