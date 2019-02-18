@@ -43,6 +43,76 @@ module CellMod {
         delete cell;
     }
 
+    proc initCellBoundsFromParent(parent: UCell, child: UCell, halfSides: Vec3, childIdx: int) {
+        var _shifts = [c in 0..#DIMS] ((childIdx >> c) & 1);
+        var shifts = (_shifts[X], _shifts[Y], _shifts[Z]);
+        child.minBounds = parent.minBounds + (shifts * halfSides);
+        child.maxBounds = parent.maxBounds - ((1 - shifts) * halfSides);
+    }
+
+    proc constructEmptyTree(cell: UCell, maxLevel: int) {
+        constructEmptyTree(cell, 0, maxLevel);
+    }
+    
+    proc constructEmptyTree(cell: UCell, currentLevel: int, maxLevel: int) {
+        if currentLevel == maxLevel {
+            return;
+        }
+
+        var halfSides: Vec3 = (cell.maxBounds - cell.minBounds) / 2;
+        for i in 0..#N_CELL_CHILDREN {
+            var child: UCell = new UCell();
+            cell.children[i] = child;
+            initCellBoundsFromParent(cell, child, halfSides, i);
+            constructEmptyTree(child, currentLevel + 1, maxLevel);
+        }
+    }
+
+    proc getLeaves(cell: UCell, maxLevel: int) {
+        var leaves: [0..-1] UCell;
+        return getLeaves(cell, leaves, 0, maxLevel);
+    }
+
+    proc getLeaves(cell: UCell, leaves: [] UCell, currentLevel:int, maxLevel: int) {
+        if currentLevel == maxLevel - 1 {
+            for child in cell.children {
+                leaves.push_back(child);
+            }
+        } else {
+            for child in cell.children {
+                getLeaves(child, leaves, currentLevel + 1, maxLevel);
+            }
+        }
+        return leaves;
+    }
+
+    proc updateEmptyCells(cell: UCell, maxLevel: int) {
+        updateEmptyCells(cell, 0, maxLevel);
+    }
+
+    proc updateEmptyCells(cell: UCell, currentLevel: int, maxLevel: int) {
+        if currentLevel == maxLevel {
+            return;
+        }
+
+        for child in cell.children {
+            updateEmptyCells(child, currentLevel + 1, maxLevel);
+        }
+
+        var mass = 0.0;
+        for child in cell.children {
+            mass += child.mass;
+
+            var combinedMass = cell.mass + child.mass;
+            if combinedMass == 0.0 {
+                continue;
+            }
+
+            cell.cm = (cell.mass * cell.cm + child.mass * child.cm) / combinedMass;
+        }
+        cell.mass = mass;
+    }
+    
     proc insertBody(cell: UCell, body: UBody) {
         if cell.body == nil && cell.isExternal() {
             cell.body = body;
@@ -54,11 +124,8 @@ module CellMod {
                 for i in 0..#N_CELL_CHILDREN {
                     var child: UCell = new UCell();
                     cell.children[i] = child;
+                    initCellBoundsFromParent(cell, child, halfSides, i);
 
-                    var _shifts = [c in 0..#DIMS] ((i >> c) & 1);
-                    var shifts = (_shifts[X], _shifts[Y], _shifts[Z]);
-                    child.minBounds = cell.minBounds + (shifts * halfSides);
-                    child.maxBounds = cell.maxBounds - ((1 - shifts) * halfSides);
                     if cell.body != nil && child.containsPosition(cell.body.position) {
                         insertBody(child, cell.body);
                         cell.body = nil;

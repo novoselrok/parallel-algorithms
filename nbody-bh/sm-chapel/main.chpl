@@ -9,6 +9,8 @@ config const filename = "../data/small.chpl.txt";
 config const iterations = 1;
 config const nBodies = 16;
 
+const LEVEL = 2;
+
 proc getUniverseSize(bodies: [] UBody) {
     var universeMin = [Math.INFINITY, Math.INFINITY, Math.INFINITY];
     var universeMax = [-Math.INFINITY, -Math.INFINITY, -Math.INFINITY];
@@ -57,19 +59,28 @@ proc main() {
             body.resetForce();
         }
 
-        var root: unmanaged Cell = new unmanaged Cell();
+        var root: UCell = new UCell();
         root.minBounds = universeMin;
         root.maxBounds = universeMax;
 
-        for body in bodies {
-            insertBody(root, body);
+        constructEmptyTree(root, LEVEL);
+        var leaves = getLeaves(root, LEVEL);
+
+        forall leaf in leaves {
+            for body in bodies {
+                if leaf.containsPosition(body.position) {
+                    insertBody(leaf, body);
+                }
+            }
         }
 
-        for body in bodies {
+        updateEmptyCells(root, LEVEL);
+
+        forall body in bodies {
             computeForce(root, body);
         }
 
-        for body in bodies {
+        forall body in bodies {
             body.position = body.position + (dt * body.velocity);
             body.velocity = body.velocity + (dt / body.mass * body.force);
         }
