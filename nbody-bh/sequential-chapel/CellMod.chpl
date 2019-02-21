@@ -55,8 +55,7 @@ module CellMod {
                     var child: UCell = new UCell();
                     cell.children[i] = child;
 
-                    var _shifts = [c in 0..#DIMS] ((i >> c) & 1);
-                    var shifts = (_shifts[X], _shifts[Y], _shifts[Z]);
+                    var shifts = ((i >> 0) & 1, (i >> 1) & 1, (i >> 2) & 1);
                     child.minBounds = cell.minBounds + (shifts * halfSides);
                     child.maxBounds = cell.maxBounds - ((1 - shifts) * halfSides);
                     if cell.body != nil && child.containsPosition(cell.body.position) {
@@ -91,8 +90,13 @@ module CellMod {
     }
 
     proc computeForce(cell: UCell, body: UBody) {
-        if (cell.body != nil && cell.body.id == body.id) || cell.mass == 0.0 {
-            return;
+        if cell.mass == 0.0 {
+           return;
+        }
+        if cell.body != nil {
+            if cell.body.id == body.id {
+                return;
+            }
         }
 
         if cell.isExternal() {

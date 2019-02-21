@@ -44,8 +44,7 @@ module CellMod {
     }
 
     proc initCellBoundsFromParent(parent: UCell, child: UCell, halfSides: Vec3, childIdx: int) {
-        var _shifts = [c in 0..#DIMS] ((childIdx >> c) & 1);
-        var shifts = (_shifts[X], _shifts[Y], _shifts[Z]);
+        var shifts = ((childIdx >> 0) & 1, (childIdx >> 1) & 1, (childIdx >> 2) & 1);
         child.minBounds = parent.minBounds + (shifts * halfSides);
         child.maxBounds = parent.maxBounds - ((1 - shifts) * halfSides);
     }
@@ -158,8 +157,13 @@ module CellMod {
     }
 
     proc computeForce(cell: UCell, body: UBody) {
-        if (cell.body != nil && cell.body.id == body.id) || cell.mass == 0.0 {
-            return;
+        if cell.mass == 0.0 {
+           return;
+        }
+        if cell.body != nil {
+            if cell.body.id == body.id {
+                return;
+            }
         }
 
         if cell.isExternal() {

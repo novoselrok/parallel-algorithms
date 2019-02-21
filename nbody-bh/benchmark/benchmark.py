@@ -7,9 +7,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 executables = [
-    ('chapel', './main --filename={file} --nkeys={nkeys}'),
-    ('c', './main {file} {nkeys}'),
-    ('julia', 'julia -O3 --check-bounds=no main.jl {file}')
+    ('chapel', './main --filename={file} --nBodies={nbodies} --iterations={iterations}'),
+    ('c', './main {file} {nbodies} {iterations}'),
+    ('julia', 'julia -O3 --check-bounds=no main.jl {file} {iterations}')
 ]
 
 threads = [
@@ -20,10 +20,11 @@ threads = [
     16
 ]
 
-nkeys = [
-    # int(1e5),
-    # int(1e6),
-    int(5e7)
+nbodies = [
+    10,
+    20,
+    40,
+    80
 ]
 
 prefixes = [
@@ -32,6 +33,14 @@ prefixes = [
 ]
 
 N_REPEATS = 3
+
+def get_filename(lang, n):
+    file = None
+    if lang == 'chapel':
+        file = 'test' + str(n) + 'k.chpl.txt'
+    else:
+        file = 'test' + str(n) + 'k.txt'
+    return '../../nbody/data/' + file
 
 def set_sm_env(env, lang, threads):
     if lang == 'julia':
@@ -52,7 +61,7 @@ def run_cmd(cmd, env=None):
 def main():
     results = {}
 
-    for n in nkeys:
+    for n in nbodies:
         print(n)
         results[n] = {}
 
@@ -69,8 +78,8 @@ def main():
                     os.chdir(os.path.join('..', prefix + '-' + lang))
 
                     _results = None
-                    file = '../data/arr{}.txt'.format(n)
-                    cmd = cmd_template.format(file=file, nkeys=n)
+                    file = get_filename(lang, n)
+                    cmd = cmd_template.format(file=file, nbodies=n * 1000, iterations=1)
 
                     if prefix == 'sequential':
                         my_env = set_sm_env(os.environ.copy(), lang, 1)
@@ -92,7 +101,7 @@ def main():
                     results[n][prefix][lang] = _results
 
     os.chdir(os.path.join('..', 'benchmark'))
-    json.dump(results, open('results-5e7.json', 'w', encoding='utf-8'))
+    json.dump(results, open('results.json', 'w', encoding='utf-8'))
 
 if __name__ == '__main__':
     main()

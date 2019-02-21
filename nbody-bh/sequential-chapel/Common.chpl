@@ -1,12 +1,12 @@
 module Common {
     type Vec3 = (real, real, real);
 
-    const X = 1;
-    const Y = 2;
-    const Z = 3;
-    const DIMS = 3;
-    const THETA = 0.5;
-    const G = 6.67e-11;
+    param X = 1;
+    param Y = 2;
+    param Z = 3;
+    param DIMS = 3;
+    param THETA = 0.5;
+    param G = 6.67e-11;
 
     proc distance(vec1: Vec3, vec2: Vec3) {
         var dx = vec1[X] - vec2[X];

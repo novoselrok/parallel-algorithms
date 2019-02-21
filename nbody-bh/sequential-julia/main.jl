@@ -83,6 +83,5 @@ nprecompilesteps = haskey(ENV, "JL_NRETRIES") ? parse(Int, ENV["JL_NRETRIES"]) :
 times = []
 for i in 1:nprecompilesteps
     push!(times, main(ARGS))
-    println(times)
 end
 println(minimum(times))
