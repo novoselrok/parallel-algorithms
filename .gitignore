@@ -9,3 +9,7 @@ main_real
 
 cmake-build-debug
 .idea
+
+*.gch
+*.o
+*.zip

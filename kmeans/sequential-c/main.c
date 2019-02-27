@@ -6,7 +6,7 @@
 #include <float.h>
 
 #define VERBOSE 1
-#define POINT_SIZE 100
+#define POINT_SIZE 10
 
 // Type definition for a point of size POINT_SIZE
 typedef double point_t[POINT_SIZE];
