@@ -37,16 +37,18 @@ void* darray_get(darray_t* darray, size_t idx) {
     return darray->elements[idx];
 }
 
-// void darray_extend(darray_t* darray, void** extension, int n) {
-//     for (int i = 0; i < n; i++) {
-//         darray_append(darray, extension[i]);
-//     }
-// }
+void darray_clear(darray_t* darray) {
+    darray->length = 0;
+}
+
+void darray_copy(darray_t* dst, darray_t* src) {
+    darray_clear(dst);
+    for (size_t i = 0; i < src->length; i++) {
+        darray_append(dst, darray_get(src, i));
+    }
+}
 
 void darray_free(darray_t* darray) {
-    for (int i = 0; i < darray->capacity; i++) {
-        free(darray->elements[i]);
-    }
     free(darray->elements);
     free(darray);
 }

@@ -11,6 +11,7 @@
 #include "body.h"
 #include "cell.h"
 #include "darray.h"
+#include "orb.h"
 
 #define MASTER 0
 #define MAX_LINE_LENGTH 1024
@@ -40,7 +41,7 @@ void get_universe_size(vect3_t universe_min, vect3_t universe_max, darray_t* bod
     }
 }
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char *argv[]) {
     FILE* f;
     f = fopen(argv[1], "r");
     if (f == NULL) {
@@ -65,7 +66,7 @@ int main(int argc, char const *argv[]) {
     int* sendcounts = malloc(world_size * sizeof(int));
     int* displs = malloc(world_size * sizeof(int));
     
-    int block_size = (int) (n_bodies + world_size - 1) / world_size;
+    int block_size = (n_bodies + world_size - 1) / world_size;
     for (int i = 0; i < world_size; i++) {
         int start = i * block_size;
         int end = MIN(start + block_size, n_bodies);        
@@ -97,8 +98,10 @@ int main(int argc, char const *argv[]) {
 
             bodies[i].mass = mass;
             bodies[i].id = i;
+            bodies[i].work = 1;
         }
     }
+
     int my_bodies_count = sendcounts[rank];
     body_t* my_bodies = malloc(my_bodies_count * sizeof(body_t));
     MPI_Scatterv(
@@ -115,34 +118,139 @@ int main(int argc, char const *argv[]) {
     );
     // Done initial scatter
 
-    for (int i = 0; i < my_bodies_count; i++) {
-        printf("rank %d id %d %f\n", rank, my_bodies[i].id, my_bodies[i].position[X]);
-    }
-
     darray_t* dbodies = malloc(sizeof(darray_t));
     darray_init(dbodies, 1024);
 
     for (int i = 0; i < my_bodies_count; i++) {
-        printf("rank %d appending %d\n", rank, my_bodies[i].id); fflush(stdout);
         darray_append(dbodies, AS_VOID_PTR(&my_bodies[i]));
     }
+    double start_time, end_time;
+    MPI_Barrier(MPI_COMM_WORLD);
+    start_time = MPI_Wtime();
 
-    printf("dbodies len: %zu\n", dbodies->length);
-    for (int i = 0; i < dbodies->length; i++) {
-        body_t* body = AS_BODY_PTR(dbodies->elements[i]);
-        printf("rank %d id %d %f\n", rank, body->id, body->position[X]);
+    double dt = 0.1;
+    size_t n_splits = (size_t) log2(world_size);
+    darray_t* my_bounds = malloc(sizeof(darray_t));
+    darray_t* other_bounds = malloc(sizeof(darray_t));
+    darray_t* partners = malloc(sizeof(darray_t));
+    darray_init(my_bounds, n_splits);
+    darray_init(other_bounds, n_splits);
+    darray_init(partners, n_splits);
+
+    for (int iter = 0; iter < iterations; iter++) {
+        vect3_t universe_min, universe_max;
+        get_universe_size(universe_min, universe_max, dbodies);
+
+        darray_clear(my_bounds);
+        darray_clear(other_bounds);
+        darray_clear(partners);
+
+        orb(dbodies, rank, world_size, universe_min, universe_max, my_bounds, other_bounds, partners);
+
+        cell_t* root = malloc(sizeof(cell_t));
+        init_cell_with_bounds(root, universe_min, universe_max);
+
+        for (size_t i = 0; i < my_bounds->length; i++) {
+            double* tuple = AS_DOUBLE_PTR(darray_get(my_bounds, i));
+            vect3_t min, max;
+            unpack_tuple(tuple, min, max);
+            insert_empty_cell(root, min, max);
+        }
+
+        for (size_t i = 0; i < dbodies->length; i++) {
+            body_t* body = AS_BODY_PTR(darray_get(dbodies, i));
+            insert_body(root, body);
+        }
+
+        darray_t* cells_to_send = malloc(sizeof(darray_t));
+        darray_init(cells_to_send, 1024);
+        MPI_Status status;
+        for (size_t i = 0; i < my_bounds->length; i++) {
+            vect3_t my_min, my_max, other_min, other_max;
+            double* my_bounds_tuple = AS_DOUBLE_PTR(darray_get(my_bounds, i));
+            double* other_bounds_tuple = AS_DOUBLE_PTR(darray_get(my_bounds, i));
+            unpack_tuple(my_bounds_tuple, my_min, my_max);
+            unpack_tuple(other_bounds_tuple, other_min, other_max);
+
+            darray_clear(cells_to_send);
+            get_cells_to_send(root, NULL, other_min, other_max, (int) i, 0, cells_to_send);
+
+            mpi_cell_t* packed = pack_cells(cells_to_send);
+
+            int* partner_above = AS_INT_PTR(darray_get(partners, i));
+            int partner = partner_above[0];
+            bool above_split = (bool) partner_above[1];
+
+            int recv_cells_count;
+            mpi_cell_t* recv_cells = NULL;
+            if (above_split) {
+                MPI_Probe(partner, 0, MPI_COMM_WORLD, &status);
+                MPI_Get_count(&status, MPI_Cell, &recv_cells_count);
+                recv_cells = malloc(sizeof(mpi_cell_t) * recv_cells_count);
+                MPI_Recv(recv_cells, recv_cells_count, MPI_Cell, partner, 0, MPI_COMM_WORLD, &status);
+
+                MPI_Send(packed, (int) cells_to_send->length, MPI_Cell, partner, 0, MPI_COMM_WORLD);
+            } else {
+                MPI_Send(packed, (int) cells_to_send->length, MPI_Cell, partner, 0, MPI_COMM_WORLD);
+
+                MPI_Probe(partner, 0, MPI_COMM_WORLD, &status);
+                MPI_Get_count(&status, MPI_Cell, &recv_cells_count);
+                recv_cells = malloc(sizeof(mpi_cell_t) * recv_cells_count);
+                MPI_Recv(recv_cells, recv_cells_count, MPI_Cell, partner, 0, MPI_COMM_WORLD, &status);
+            }
+            free(packed);
+
+            darray_t* root_cells = reconstruct_received_cells(recv_cells, recv_cells_count);
+
+            for (size_t j = 0; j < root_cells->length; j++) {
+                cell_t* root_cell = AS_CELL_PTR(darray_get(root_cells, j));
+                insert_cell(root, root_cell);
+            }
+
+            free(recv_cells);
+            darray_free(root_cells);
+        }
+        darray_free(cells_to_send);
+
+        for (size_t i = 0; i < dbodies->length; i++) {
+            body_t* body = AS_BODY_PTR(darray_get(dbodies, i));
+            double start_force_time = MPI_Wtime();
+            compute_force(root, body);
+            body->work = MPI_Wtime() - start_force_time;
+        }
+
+        for (size_t i = 0; i < dbodies->length; i++) {
+            body_t* body = AS_BODY_PTR(darray_get(dbodies, i));
+            body->position[X] += dt * body->velocity[X];
+            body->position[Y] += dt * body->velocity[Y];
+            body->position[Z] += dt * body->velocity[Z];
+
+            body->velocity[X] += dt / body->mass * body->force[X];
+            body->velocity[Y] += dt / body->mass * body->force[Y];
+            body->velocity[Z] += dt / body->mass * body->force[Z];
+        }
+
+        free_cell(root);
     }
-
-    vect3_t universe_min, universe_max;
-    get_universe_size(universe_min, universe_max, dbodies);
-
+    MPI_Barrier(MPI_COMM_WORLD);
+    end_time = MPI_Wtime();
     if (rank == MASTER) {
-        printf("%f %f\n", universe_min[X], universe_max[X]);
-        printf("%f %f\n", universe_min[Y], universe_max[Y]);
-        printf("%f %f\n", universe_min[Z], universe_max[Z]);
+        printf("%f\n", end_time - start_time);
     }
 
-    
+    char name[50];
+    sprintf(name, "out%d.txt", rank);
+    FILE* outf;
+    outf = fopen(name, "w");
+    if(outf == NULL) {
+        printf("Could not open output file.\n");
+        exit(1);
+    }
+    for (size_t i = 0; i < dbodies->length; i++) {
+        body_t* body = AS_BODY_PTR(darray_get(dbodies, i));
+        fprintf(outf, "%d %e %e %e %e %e %e\n", body->id, body->position[X], body->position[Y], body->position[Z], body->velocity[X], body->velocity[Y], body->velocity[Z]);
+    }
+    fclose(outf);
 
     MPI_Finalize();
 }
