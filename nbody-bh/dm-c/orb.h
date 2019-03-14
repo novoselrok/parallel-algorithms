@@ -46,7 +46,6 @@ double frac_weight_below(darray_t* bodies, double split, coord_t coord, MPI_Comm
 
 double bisection(double min, double max, darray_t* bodies, coord_t coord, MPI_Comm comm) {
     double fmin = frac_weight_below(bodies, min, coord, comm);
-//    double fmax = frac_weight_below(bodies, max, coord, comm);
     double fmid, mid = 0.0;
 
     int iter = 0;
@@ -109,6 +108,8 @@ void orb(
 
         double split = bisection(my_min[coord], my_max[coord], bodies, coord, comm_subset);
 
+        //printf("rank %d iter %d split %f\n", rank, i, split);
+
         MPI_Comm_free(&comm_subset);
 
         above_split = is_above_split(rank, n_procs_left);
@@ -125,6 +126,8 @@ void orb(
             my_max[coord] = split;
             other_min[coord] = split;
         }
+
+        //printf("rank %d %f %f %f %f %f %f\n", rank, other_min[X], other_min[Y], other_min[Z], other_max[X], other_max[Y], other_max[Z]);
 
         // Save my bounds and other bounds
         double* my_bounds_tuple = malloc(sizeof(double) * DIMS * 2);
@@ -145,6 +148,8 @@ void orb(
                 darray_append(other_bodies, AS_VOID_PTR(body));
             }
         }
+
+        //printf("rank %d iter %d my_bodies_len %d\n", rank, i, my_bodies->length);
 
         int partner = get_partner_rank(rank, n_procs_left);
         int* partner_above = (int*) malloc(sizeof(int) * 2);
@@ -179,6 +184,8 @@ void orb(
 
         darray_copy(bodies, my_bodies);
     }
+
+    //printf("rank %d final_bodies_len %d\n", rank, bodies->length);
 }
 
 #endif

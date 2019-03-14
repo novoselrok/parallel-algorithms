@@ -193,9 +193,11 @@ void insert_empty_cell(cell_t *cell, vect3_t min_bounds, vect3_t max_bounds) {
     for (int i = 0; i < N_CELL_CHILDREN; i++) {
         cell_t* child = cell->children[i];
         if (child != NULL && cell_contains_bounds(child, min_bounds, max_bounds)) {
+            // printf("recursing i = %d\n", i);
             insert_empty_cell(child, min_bounds, max_bounds);
             return;
         } else if (child == NULL) {
+            // printf("initing new child i = %d\n", i);
             cell_t* new_child = malloc(sizeof(cell_t));
             cell->children[i] = new_child;
             init_cell_with_bounds(new_child, min_bounds, max_bounds);
@@ -211,8 +213,10 @@ void get_cells_to_send(
         vect3_t max_bounds,
         int min_depth,
         int depth,
-        darray_t* cells_to_send) {
-
+        darray_t* cells_to_send,
+        int rank) {
+    
+    // printf("rank %d depth %d\n", rank, depth);
     if (depth > min_depth) {
         if (depth - min_depth == 1) {
             cell->parent_idx = -1;
@@ -224,16 +228,21 @@ void get_cells_to_send(
     }
 
     vect3_t bounds_center = {(max_bounds[X] - min_bounds[X]) / 2, (max_bounds[Y] - min_bounds[Y]) / 2, (max_bounds[Z] - min_bounds[Z]) / 2};
+    // printf("minmax bounds rank %d %f %f %f %f %f %f\n", rank, min_bounds[X], min_bounds[Y], min_bounds[Z], max_bounds[X], max_bounds[Y], max_bounds[Z]);
     double dx = cell->max_bounds[X] - cell->min_bounds[X];
     double dy = cell->max_bounds[Y] - cell->min_bounds[Y];
     double dz = cell->max_bounds[Z] - cell->min_bounds[Z];
+    //printf("rank %d bounds center %f %f %f\n", rank, bounds_center[X], bounds_center[Y], bounds_center[Z]);
+    //printf("rank %d cell cm %f %f %f\n", rank, cell->cm[X], cell->cm[Y], cell->cm[Z]);
+    //printf("rank %d cell bounds %f %f %f\n", rank, dx, dy, dz);
     double size = dx + dy + dz;
     double d = distance(cell->cm, bounds_center);
+    //printf("meta rank %d size %f distance %f ratio %f\n", rank, size, d, size / d);
 
     if (size / d >= THETA) {
         for (int i = 0; i < N_CELL_CHILDREN; i++) {
-            if (cell->children[i] != NULL) {
-                get_cells_to_send(cell->children[i], cell, min_bounds, max_bounds, min_depth, depth + 1, cells_to_send);
+            if (cell->children[i] != NULL && cell->children[i]->mass != 0.0) {
+                get_cells_to_send(cell->children[i], cell, min_bounds, max_bounds, min_depth, depth + 1, cells_to_send, rank);
             } else {
                 break;
             }

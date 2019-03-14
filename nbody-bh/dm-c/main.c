@@ -162,19 +162,21 @@ int main(int argc, char *argv[]) {
             insert_body(root, body);
         }
 
+        //printf("rank %d root.cm = %f %f %f\n", rank, root->cm[X], root->cm[Y], root->cm[Z]);
+
         darray_t* cells_to_send = malloc(sizeof(darray_t));
         darray_init(cells_to_send, 1024);
         MPI_Status status;
         for (size_t i = 0; i < my_bounds->length; i++) {
             vect3_t my_min, my_max, other_min, other_max;
             double* my_bounds_tuple = AS_DOUBLE_PTR(darray_get(my_bounds, i));
-            double* other_bounds_tuple = AS_DOUBLE_PTR(darray_get(my_bounds, i));
+            double* other_bounds_tuple = AS_DOUBLE_PTR(darray_get(other_bounds, i));
             unpack_tuple(my_bounds_tuple, my_min, my_max);
             unpack_tuple(other_bounds_tuple, other_min, other_max);
 
             darray_clear(cells_to_send);
-            get_cells_to_send(root, NULL, other_min, other_max, (int) i, 0, cells_to_send);
-
+            get_cells_to_send(root, NULL, other_min, other_max, (int) i, 0, cells_to_send, rank);
+            //printf("rank %d cells_to_send_len %d\n", rank, cells_to_send->length);
             mpi_cell_t* packed = pack_cells(cells_to_send);
 
             int* partner_above = AS_INT_PTR(darray_get(partners, i));
@@ -202,6 +204,8 @@ int main(int argc, char *argv[]) {
 
             darray_t* root_cells = reconstruct_received_cells(recv_cells, recv_cells_count);
 
+            //printf("rank %d root_cells_len %d\n", rank, root_cells->length);
+
             for (size_t j = 0; j < root_cells->length; j++) {
                 cell_t* root_cell = AS_CELL_PTR(darray_get(root_cells, j));
                 insert_cell(root, root_cell);
@@ -211,6 +215,7 @@ int main(int argc, char *argv[]) {
             darray_free(root_cells);
         }
         darray_free(cells_to_send);
+        //printf("rank %d root.cm = %f %f %f root.mass = %f\n", rank, root->cm[X], root->cm[Y], root->cm[Z], root->mass);
 
         for (size_t i = 0; i < dbodies->length; i++) {
             body_t* body = AS_BODY_PTR(darray_get(dbodies, i));
