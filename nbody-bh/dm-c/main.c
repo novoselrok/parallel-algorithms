@@ -141,6 +141,11 @@ int main(int argc, char *argv[]) {
         vect3_t universe_min, universe_max;
         get_universe_size(universe_min, universe_max, dbodies);
 
+        for (size_t i = 0; i < dbodies->length; i++) {
+            body_t* body = AS_BODY_PTR(darray_get(dbodies, i));
+            reset_force(body);
+        }
+
         darray_clear(my_bounds);
         darray_clear(other_bounds);
         darray_clear(partners);

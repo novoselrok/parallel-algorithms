@@ -124,13 +124,14 @@ end
     group_partners::Array{RemoteChannel{FloatCh}})
 
     fmin = frac_weight_below(bodies, min, coord, my_channel, group_partners)
+    println("fmin ", fmin); flush(stdout)
     mid = 0.0
 
     iter = 0
     while iter < BISECTION_MAX_ITER && abs((max - min) / 2) > BISECTION_TOL
         mid = (min + max) / 2
         fmid = frac_weight_below(bodies, mid, coord, my_channel, group_partners)
-        # println("fmid ", fmid); flush(stdout)
+        println("fmid ", fmid); flush(stdout)
         if abs(fmid) < BISECTION_TOL
             # println("breaking"); flush(stdout)
             break
@@ -185,7 +186,7 @@ end
 
         split = bisection(my_min[coord], my_max[coord], bodies, coord, float_channels[ob_rank], group_partners)
 
-        # println("split ", split); flush(stdout)
+        println("split ", split); flush(stdout)
 
         above_split = is_above_split(zb_rank, n_procs_left)
 
@@ -224,7 +225,7 @@ end
         recv_bodies = take!(bodies_channels[ob_rank])
 
         bodies = vcat(my_bodies, recv_bodies)
-        # println(length(bodies))
+        println(zb_rank, " ", (bodies))
         my_min = copy(my_min)
         my_max = copy(my_max)
     end
@@ -250,6 +251,10 @@ end
         # println("iter ", iter)
         (universe_min, universe_max) = get_universe_size(bodies)
 
+        for body in bodies
+            reset_force(body)
+        end
+
         # Calculate universe bounds
         for (idx, channel) in enumerate(bounds_channels)
             if idx != ob_rank
@@ -264,7 +269,7 @@ end
         end
         # println("universe size ", universe_min, universe_max)
 
-        # println((universe_min, universe_max))
+        println((universe_min, universe_max))
 
         # ORB
         (bodies, my_bounds, other_bounds, partners) = orb(bodies, universe_min, universe_max, bodies_channels, group_channels, float_channels)
