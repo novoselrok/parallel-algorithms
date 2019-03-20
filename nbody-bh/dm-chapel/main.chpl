@@ -39,15 +39,19 @@ proc main() {
     var localeDomain = localeSpace dmapped Block(boundingBox=localeSpace);
 
     var bounds: [localeDomain] Bounds;
-    var bounds$: [localeDomain] sync bool;
+    var bounds$: [localeDomain] sync int;
 
-    var workBelow$: [localeDomain] sync real;
-    var workAbove$: [localeDomain] sync real;
+    var workSum: [localeDomain] Work;
+    var workSum$: [localeDomain] sync int;
 
     var otherBodies: [localeDomain] owned BodiesArray;
-    var otherBodies$: [localeDomain] sync bool;
+    var otherBodies$: [localeDomain] sync int;
 
+    var groups: [localeDomain] int;
     var groups$: [localeDomain] sync int;
+
+    var cells: [localeDomain] owned CellTupleArray;
+    var cells$: [localeDomain] sync int;
 
     // startVerboseComm();
     coforall L in Locales do on L {
@@ -55,11 +59,14 @@ proc main() {
             bodies.localSlice(bodies.localSubdomain()),
             bounds,
             bounds$,
-            workBelow$,
-            workAbove$,
+            workSum,
+            workSum$,
             otherBodies,
             otherBodies$,
+            groups,
             groups$,
+            cells,
+            cells$,
             iterations
         );
     }

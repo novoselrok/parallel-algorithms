@@ -297,7 +297,7 @@ end
 
             cells_to_send = get_cells_to_send(root, Cell(), other_min, other_max, i - 1, 0, Array{Cell}([]))
             packed = pack_cells(cells_to_send)
-            # println("cells_to_send_len: ", length(cells_to_send))
+            println("cells_to_send_len: ", length(cells_to_send))
 
             (partner, above_split) = partners[i]
             # println("partner ", partner)
@@ -309,7 +309,7 @@ end
                 insert_cell(root, root_cell)
             end
 
-            # println("root_cells_len ", length(root_cells))
+            println("root_cells_len ", length(root_cells))
         end
 
         # println("after exchange root.cm = ", root.cm, " root.mass = ", root.mass)

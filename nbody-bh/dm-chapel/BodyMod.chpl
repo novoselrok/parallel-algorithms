@@ -3,7 +3,7 @@ module BodyMod {
 
     record Body {
         var id: int;
-        var force: Vec3;
+        var force: Vec3 = (0.0, 0.0, 0.0);
         var position: Vec3;
         var velocity: Vec3;
         var mass: real;

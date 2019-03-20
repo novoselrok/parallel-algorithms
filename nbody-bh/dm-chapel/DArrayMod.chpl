@@ -1,6 +1,7 @@
 module DArrayMod {
 
     use BodyMod;
+    use CellMod;
 
     type UBodiesArray = unmanaged BodiesArray;
     class BodiesArray {
@@ -8,5 +9,9 @@ module DArrayMod {
         proc push(el: Body) {
             this.elements.push_back(el);
         }
+    }
+
+    class CellTupleArray {
+        var elements: [0..-1] CellTuple;
     }
 }

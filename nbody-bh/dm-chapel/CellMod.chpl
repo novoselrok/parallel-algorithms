@@ -10,8 +10,11 @@ module CellMod {
         var minBounds: Vec3;
         var maxBounds: Vec3;
         var body: Body = nil;
+        var bodyPresent: bool = false;
         var mass: real;
         var cm: Vec3;
+        var parentIdx = -1;
+        var arrayIdx = -1;
 
         proc isExternal() {
             return children[0] == nil;
@@ -31,6 +34,8 @@ module CellMod {
         }
     }
 
+    type CellTuple = (int, Vec3, Vec3, Vec3, real);
+
     proc freeCell(cell: UCell) {
         if cell == nil {
             return;
@@ -42,12 +47,119 @@ module CellMod {
 
         delete cell;
     }
+    
+    proc cellContainsBounds(cell: UCell, minBounds: Vec3, maxBounds: Vec3) {
+        for c in 1..DIMS {
+            if cell.minBounds[c] > minBounds[c] || cell.maxBounds[c] < maxBounds[c] {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    proc getCellsToSend(
+        cell: UCell,
+        parent: UCell,
+        minBounds: Vec3,
+        maxBounds: Vec3,
+        minDepth: int,
+        depth: int,
+        cellsToSend: [] UCell
+    ) {
+        if depth > minDepth {
+            cell.parentIdx = if depth - minDepth == 1 then -1 else parent.arrayIdx;
+            cell.arrayIdx = cellsToSend.size;
+            cellsToSend.push_back(cell);
+        }
+
+        var size = + reduce (cell.maxBounds - cell.minBounds);
+        var boundsCenter = (maxBounds - minBounds) / 2.0;
+        var d = distance(cell.cm, boundsCenter);
+
+        if size / d >= THETA {
+            for i in 0..#N_CELL_CHILDREN {
+                if cell.children[i] != nil && cell.children[i].mass != 0.0 {
+                    getCellsToSend(cell.children[i], cell, minBounds, maxBounds, minDepth, depth + 1, cellsToSend);
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    proc reconstructReceivedCells(recvCells: [] CellTuple) {
+        var allCells: [0..-1] UCell;
+        var rootCells: [0..-1] UCell;
+
+        for (parentIdx, cm, minBounds, maxBounds, mass) in recvCells {
+            var cell: UCell = new UCell();
+            cell.cm = cm;
+            cell.minBounds = minBounds;
+            cell.maxBounds = maxBounds;
+            cell.mass = mass;
+
+            if parentIdx == -1 {
+                rootCells.push_back(cell);
+            } else {
+                var parent = allCells[parentIdx];
+                for i in 0..#N_CELL_CHILDREN {
+                    if cell.children[i] == nil {
+                        parent.children[i] = cell;
+                        break;
+                    }
+                }
+            }
+            allCells.push_back(cell);
+        }
+        return rootCells;
+    }
+
+    proc packCells(cells: [] UCell) {
+        var packed: [0..-1] CellTuple;
+        for cell in cells {
+            packed.push_back((cell.parentIdx, cell.cm, cell.minBounds, cell.maxBounds, cell.mass));
+        }
+        return packed;
+    }
+
+    proc insertEmptyCell(cell: UCell, minBounds: Vec3, maxBounds: Vec3) {
+        for i in 0..#N_CELL_CHILDREN {
+            if cell.children[i] != nil && cellContainsBounds(cell.children[i], minBounds, maxBounds) {
+                insertEmptyCell(cell.children[i], minBounds, maxBounds);
+                return;
+            } else if (cell.children[i] == nil) {
+                var child: UCell = new UCell();
+                cell.children[i] = child;
+                child.minBounds = minBounds;
+                child.maxBounds = maxBounds;
+                return;
+            }
+        }
+    }
+
+    proc insertCell(cell: UCell, insert: UCell) {
+        if cell.mass != 0.0 || insert.mass != 0.0 {
+            cell.cm = (cell.mass * cell.cm + insert.mass * insert.cm) / (cell.mass + insert.mass);
+            cell.mass += insert.mass;
+        }
+
+        for i in 0..#N_CELL_CHILDREN {
+            if cell.children[i] != nil && cellContainsBounds(cell.children[i], insert.minBounds, insert.maxBounds) {
+                insertCell(cell.children[i], insert);
+                return;
+            } else if cell.children[i] == nil {
+                cell.children[i] = insert;
+                return;
+            }
+        }
+    }
 
     proc insertBody(cell: UCell, body: Body) {
-        if cell.body == nil && cell.isExternal() {
+        if !cell.bodyPresent && cell.isExternal() {
             cell.body = body;
             cell.mass = body.mass;
             cell.cm = body.position;
+            cell.bodyPresent = true;
         } else {
             if cell.isExternal() {
                 var halfSides: Vec3 = (cell.maxBounds - cell.minBounds) / 2;
@@ -58,9 +170,9 @@ module CellMod {
                     var shifts = ((i >> 0) & 1, (i >> 1) & 1, (i >> 2) & 1);
                     child.minBounds = cell.minBounds + (shifts * halfSides);
                     child.maxBounds = cell.maxBounds - ((1 - shifts) * halfSides);
-                    if cell.body != nil && child.containsPosition(cell.body.position) {
+                    if cell.bodyPresent && child.containsPosition(cell.body.position) {
                         insertBody(child, cell.body);
-                        cell.body = nil;
+                        cell.bodyPresent = false;
                     }
                 }
             }
@@ -77,7 +189,7 @@ module CellMod {
         }
     }
 
-    proc addForce(body: Body, position: Vec3, mass: real) {
+    proc addForce(inout body: Body, position: Vec3, mass: real) {
         var dx = position[X] - body.position[X];
         var dy = position[Y] - body.position[Y];
         var dz = position[Z] - body.position[Z];
@@ -85,21 +197,21 @@ module CellMod {
         var dist = sqrt(dx*dx + dy*dy + dz*dz);
         var dist_cubed = dist * dist * dist;
         var f = (-G * body.mass * mass) / dist_cubed;
-
-        body.force = body.force + (f * dx, f * dy, f * dz);
+        var tmp = body.force + (f * dx, f * dy, f * dz);
+        body.force = tmp;
     }
 
-    proc computeForce(cell: UCell, body: Body) {
+    proc computeForce(cell: UCell, inout body: Body) {
         if cell.mass == 0.0 {
            return;
         }
-        if cell.body != nil {
+        if cell.bodyPresent {
             if cell.body.id == body.id {
                 return;
             }
         }
 
-        if cell.isExternal() {
+        if cell.isExternal() && cell.bodyPresent {
             addForce(body, cell.body.position, cell.body.mass);
         } else {
             var diff = cell.maxBounds - cell.minBounds;
@@ -110,7 +222,9 @@ module CellMod {
                 addForce(body, cell.cm, cell.mass);
             } else {
                 for child in cell.children {
-                    computeForce(child, body);
+                    if child != nil {
+                        computeForce(child, body);
+                    }
                 }
             }
         }
