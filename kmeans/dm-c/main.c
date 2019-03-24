@@ -7,7 +7,7 @@
 #include <float.h>
 #include <stddef.h>
 
-#define POINT_SIZE 100
+#define POINT_SIZE 128
 #define MASTER 0
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 

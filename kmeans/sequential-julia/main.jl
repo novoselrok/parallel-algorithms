@@ -1,7 +1,8 @@
 using DelimitedFiles
 using StaticArrays
+using LinearAlgebra
 
-const POINT_SIZE = 100
+const POINT_SIZE = 128
 # Type alias for Point type
 const Point = SVector{POINT_SIZE, Float64}
 
@@ -17,7 +18,8 @@ Cluster() = Cluster(0, Point(zeros(POINT_SIZE)), Point(zeros(POINT_SIZE)))
 Cluster(point::Point) = Cluster(0, Point(zeros(POINT_SIZE)), point)
 
 function distance(cluster::Cluster, point::Point)
-    sqrt(sum((cluster.mean .- point) .^ 2))
+    diff = cluster.mean .- point
+    norm(diff)
 end
 
 function add_point(cluster::Cluster, point::Point)
@@ -76,7 +78,7 @@ function main(args)
         clusters = new_clusters
     end
 
-    elapsed = println((time_ns() - start) / 1.0e9)
+    elapsed = (time_ns() - start) / 1.0e9
 
     writedlm("out.txt", labels)
     elapsed

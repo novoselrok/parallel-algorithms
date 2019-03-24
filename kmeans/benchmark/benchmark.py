@@ -7,13 +7,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 executables = [
-    ('chapel', './main --filename={file} --k={k} --maxIter={maxiter} --numPoints={npoints}'),
-    ('c', './main {file} {k} {maxiter} {npoints}'),
+    # ('chapel', './main --filename={file} --k={k} --maxIter={maxiter} --numPoints={npoints}'),
+    # ('c', './main {file} {k} {maxiter} {npoints}'),
     ('julia', 'julia main.jl {file} {k} {maxiter}')
 ]
 
 datafiles = [
-    '../data/test_100000_100_4'
+    '../data/test_64000'
 ]
 
 threads = [
@@ -26,12 +26,12 @@ threads = [
 
 nclusters = [
     256,
-    512
+    # 512
 ]
 
 prefixes = [
     'sequential',
-    'sm'
+    # 'sm'
 ]
 
 N_REPEATS = 3

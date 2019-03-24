@@ -1,4 +1,4 @@
-import sys
+import sysout1000 
 import random
 
 MIN_POSITION = -6E05
@@ -13,11 +13,11 @@ def format_tuple(tpl):
     return "({})".format(", ".join(map(str, tpl)))
 
 
-# How to run: python3 gen.py <output filename> <# bodies> -> python3 gen.py out1000 1000
+# How to run: python3 gen.py <# bodies> -> python3 gen.py 1000
 def main():
-    fname = sys.argv[1] + '.txt'
-    fname_chpl = sys.argv[1] + '.chpl.txt'
-    nbodies = int(sys.argv[2])
+    fname = 'test_' + sys.argv[1] + '.txt'
+    fname_chpl = 'test_' + sys.argv[1] + '.chpl.txt'
+    nbodies = int(sys.argv[1])
 
     with open(fname, 'w', encoding='utf-8') as f, open(fname_chpl, 'w', encoding='utf-8') as f_chpl:
         for _ in range(nbodies):

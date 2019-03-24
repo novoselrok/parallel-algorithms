@@ -6,6 +6,7 @@ main
 main_real
 
 !sample-sort/benchmark/results.json
+!benchmarks/*.json
 
 cmake-build-debug
 .idea

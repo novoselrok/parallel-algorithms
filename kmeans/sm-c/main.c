@@ -6,8 +6,8 @@
 #include <float.h>
 #include <omp.h>
 
-#define VERBOSE 1
-#define POINT_SIZE 100
+#define VERBOSE 0
+#define POINT_SIZE 120
 
 // Type definition for a point of size POINT_SIZE
 typedef double point_t[POINT_SIZE];

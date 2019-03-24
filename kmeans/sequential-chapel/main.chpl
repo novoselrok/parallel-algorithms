@@ -10,7 +10,7 @@ config const maxIter = 10;
 config const numPoints = 10;
 
 /* Datatypes */
-type Point = 100 * real;
+type Point = 128 * real;
 
 record Cluster {
     var size: int;

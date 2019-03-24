@@ -8,12 +8,12 @@ def format_tuple(tpl):
     return "({})".format(", ".join(["{:e}".format(num) for num in tpl]))
 
 
-# How to run: python3 gen.py <filename> <rows> <cols> <k>
+# How to run: python3 gen.py <rows> <cols> <k>
 def main():
-    rows = int(sys.argv[2])
-    cols = int(sys.argv[3])
-    k = int(sys.argv[4])
-    name = sys.argv[1] + '_' + str(rows) + '_' + str(cols) + '_' + str(k)
+    rows = int(sys.argv[1])
+    cols = int(sys.argv[2])
+    k = int(sys.argv[3])
+    name = 'test_' + str(rows)
     fname = name + '.txt'
     fname_chpl = name + '.chpl.txt'
     

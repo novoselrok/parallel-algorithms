@@ -1,11 +1,12 @@
 using Distributed
 using DelimitedFiles
+@everywhere using LinearAlgebra
 @everywhere using StaticArrays
 @everywhere using SharedArrays
 
 import Base.+
 
-@everywhere const POINT_SIZE = 100
+@everywhere const POINT_SIZE = 128
 # Type alias for Point type
 @everywhere const Point = SVector{POINT_SIZE, Float64}
 
@@ -21,7 +22,8 @@ end
 @everywhere Cluster(point::Point) = Cluster(0, Point(zeros(POINT_SIZE)), point)
 
 @everywhere function distance(cluster::Cluster, point::Point)
-    sqrt(sum((cluster.mean .- point) .^ 2))
+    diff = cluster.mean .- point
+    norm(diff)
 end
 
 @everywhere function add_point(cluster::Cluster, point::Point)
