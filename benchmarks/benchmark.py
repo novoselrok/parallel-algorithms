@@ -33,7 +33,7 @@ env_vars = {
 
 inputs = {
     'kmeans': {
-        'sizes': [64_000, 128_000, 256_000, 512_000],
+        'sizes': [64000, 128000, 256000, 512000],
         'consts': {
             'k': 256,
             'maxiter': 10
@@ -45,7 +45,7 @@ inputs = {
         }
     },
     'sample-sort': {
-        'sizes': [10_000_000, 20_000_000, 40_000_000, 80_000_000],
+        'sizes': [10000000, 20000000, 40000000, 80000000],
         'consts': {},
         'executables': {
             'c': '{cmdoptions} {exepath}/main {inputfile} {inputsize}',
@@ -54,7 +54,7 @@ inputs = {
         }
     },
     'nbody-bh': {
-        'sizes': [10_000, 20_000, 40_000, 80_000],
+        'sizes': [10000, 20000, 40000, 80000],
         'consts': {
             'iterations': 10
         },
