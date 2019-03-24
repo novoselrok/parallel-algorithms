@@ -1,5 +1,5 @@
-import sysout1000 
 import random
+import sys
 
 MIN_POSITION = -6E05
 MAX_POSITION = 6E05

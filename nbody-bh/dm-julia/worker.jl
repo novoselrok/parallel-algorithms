@@ -67,13 +67,13 @@ end
 end
 
 @everywhere function is_above_split(rank::Int, n_procs_left::Int)::Bool
-    rel_bit = convert(Int, log2(n_procs_left))
+    rel_bit = trunc(Int, log2(n_procs_left))
     is_above = (rank >> (rel_bit - 1)) & 1 # get last bit
     is_above == 1
 end
 
 @everywhere function get_partner_rank(rank::Int, n_procs_left::Int)
-    rel_bit = convert(Int, log2(n_procs_left))
+    rel_bit = trunc(Int, log2(n_procs_left))
     xor(rank, (1 << (rel_bit - 1))) # rank xor (2^(rel_bit-1))
 end
 
@@ -162,9 +162,9 @@ end
     group = 0
     above_split = false
 
-    n_splits = convert(Int, log2(world_size))
+    n_splits = trunc(Int, log2(world_size))
     for i in 0:n_splits-1
-        n_procs_left = convert(Int, world_size / (2^i));
+        n_procs_left = trunc(Int, world_size / (2^i));
 
         group = group << 1
         if above_split

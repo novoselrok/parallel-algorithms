@@ -65,7 +65,7 @@ function main(args)
     start = time_ns()
 
     @inbounds for i in 1:k
-        idx = convert(Int64, floor(rand() * num_points + 1))
+        idx = trunc(Int64, floor(rand() * num_points + 1))
         push!(clusters, Cluster(points[idx]))
     end
 
