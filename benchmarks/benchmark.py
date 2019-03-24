@@ -4,12 +4,14 @@ import subprocess
 import itertools
 import json
 import time
+import socket
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 N_REPEATS = 5
 NUM_WORKERS = [1, 2, 4, 8, 16]
 INPUT_FILE_TEMPLATE = 'test_{size}{postfix}.txt'
 SLEEP_TIME = 1
+IS_LOCAL = socket.gethostname() == 'box'
 
 workers = {
     'sequential': [1],
@@ -37,18 +39,18 @@ inputs = {
             'maxiter': 10
         },
         'executables': {
-            'c': '{exepath}/main {inputfile} {k} {maxiter} {inputsize}',
-            'julia': '/home/rok/julia-1.1.0/bin/julia -O3 --check-bounds=no --math-mode=fast {exepath}/main.jl {inputfile} {k} {maxiter}',
-            'chapel': '{exepath}/main --filename={inputfile} --k={k} --maxIter={maxiter} --numPoints={inputsize}'
+            'c': '{cmdoptions} {exepath}/main {inputfile} {k} {maxiter} {inputsize}',
+            'julia': '{cmdoptions} -O3 --check-bounds=no --math-mode=fast {exepath}/main.jl {inputfile} {k} {maxiter}',
+            'chapel': '{exepath}/main {cmdoptions} --filename={inputfile} --k={k} --maxIter={maxiter} --numPoints={inputsize}'
         }
     },
     'sample-sort': {
         'sizes': [10_000_000, 20_000_000, 40_000_000, 80_000_000],
         'consts': {},
         'executables': {
-            'c': '{exepath}/main {inputfile} {inputsize}',
-            'julia': '/home/rok/julia-1.1.0/bin/julia -O3 --check-bounds=no --math-mode=fast {exepath}/main.jl {inputfile}',
-            'chapel': '{exepath}/main --filename={inputfile} --nkeys={inputsize}'
+            'c': '{cmdoptions} {exepath}/main {inputfile} {inputsize}',
+            'julia': '{cmdoptions} -O3 --check-bounds=no --math-mode=fast {exepath}/main.jl {inputfile}',
+            'chapel': '{exepath}/main {cmdoptions} --filename={inputfile} --nkeys={inputsize}'
         }
     },
     'nbody-bh': {
@@ -57,12 +59,15 @@ inputs = {
             'iterations': 10
         },
         'executables': {
-            'c': '{exepath}/main {inputfile} {inputsize} {iterations}',
-            'julia': '/home/rok/julia-1.1.0/bin/julia -O3 --check-bounds=no --math-mode=fast {exepath}/main.jl {inputfile} {iterations}',
-            'chapel': '{exepath}/main --filename={inputfile} --nBodies={inputsize} --iterations={iterations}'
+            'c': '{cmdoptions} {exepath}/main {inputfile} {inputsize} {iterations}',
+            'julia': '{cmdoptions} -O3 --check-bounds=no --math-mode=fast {exepath}/main.jl {inputfile} {iterations}',
+            'chapel': '{exepath}/main {cmdoptions} --filename={inputfile} --nBodies={inputsize} --iterations={iterations}'
         }
     }
 }
+
+with open('hostfile', encoding='utf-8') as f:
+    GASNET_SSH_SERVERS = ' '.join(f.read().split('\n'))
 
 def get_input_file_postfix(language, problem):
     if language == 'chapel' and problem != 'sample-sort':
@@ -72,12 +77,33 @@ def get_input_file_postfix(language, problem):
 def get_env(language, implementation, nworkers):
     language_env_vars = env_vars[language]
     env = {}
-    env[language_env_vars['nthreads']] = str(nworkers)
+    if implementation != 'dm':
+        env[language_env_vars['nthreads']] = str(nworkers)
 
     if language == 'julia':
         env['JL_NRETRIES'] = str(3)
+    
+    if language == 'chapel' and implementation == 'dm':
+        env['CHPL_TARGET_ARCH'] = 'native'
+        env['GASNET_SPAWNFN'] = 'S'
+        env['GASNET_SSH_CMD'] = 'ssh'
+        env['GASNET_SSH_OPTIONS'] = '-x'
+        env['GASNET_SSH_SERVERS'] = GASNET_SSH_SERVERS
 
     return env
+
+def get_cmd_options(language, implementation, nworkers):
+    if language == 'julia':
+        if not IS_LOCAL and implementation == 'dm':
+            return '/home/guest/roknovosel/julia-1.0.3/bin/julia --machine-file hostfile -p {workers}'.format(nworkers)
+        else:
+            return '/home/rok/julia-1.1.0/bin/julia'
+    elif language == 'c' and implementation == 'dm':
+        return 'mpirun -np {workers} --hostfile hostfile'.format(nworkers)
+    elif language == 'chapel' and implementation == 'dm':
+        return '-nl {workers}'.format(nworkers)
+
+    return ''
 
 def run_cmd(cmd, env=None):
     result = subprocess.run(cmd.split(' '), stdout=subprocess.PIPE, env=env)
@@ -99,17 +125,17 @@ def main(args):
 
         for size in problem_inputs['sizes']:
             input_file = os.path.join(problem, 'data', INPUT_FILE_TEMPLATE.format(size=size, postfix=get_input_file_postfix(language, problem)))
-            problem_input = {
-                'exepath': path_to_implementation,
-                'inputfile': input_file,
-                'inputsize': size,
-                **problem_inputs['consts']
-            }
-            cmd = problem_inputs['executables'][language].format(**problem_input)
-            print(cmd)
 
             for nworkers in workers[implementation]:
-                print(nworkers)
+                problem_input = {
+                    'cmdoptions': get_cmd_options(language, implementation, nworkers),
+                    'exepath': path_to_implementation,
+                    'inputfile': input_file,
+                    'inputsize': size,
+                    **problem_inputs['consts']
+                }
+                cmd = problem_inputs['executables'][language].format(**problem_input)
+                print(cmd, nworkers)
 
                 problem_times = []
                 for _ in range(N_REPEATS):
@@ -118,7 +144,7 @@ def main(args):
                         print(problem_time)
                         problem_times.append(problem_time)
                         time.sleep(SLEEP_TIME)
-                    except e:
+                    except:
                         print(e)
             
                 results.append({
