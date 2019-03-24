@@ -95,13 +95,13 @@ def get_env(language, implementation, nworkers):
 def get_cmd_options(language, implementation, nworkers):
     if language == 'julia':
         if not IS_LOCAL and implementation == 'dm':
-            return '/home/guest/roknovosel/julia-1.1.0/bin/julia --machine-file hostfile -p {workers}'.format(nworkers)
+            return '/home/guest/roknovosel/julia-1.1.0/bin/julia --machine-file hostfile -p {}'.format(nworkers)
         else:
             return '/home/rok/julia-1.1.0/bin/julia'
     elif language == 'c' and implementation == 'dm':
-        return 'mpirun -np {workers} --hostfile hostfile'.format(nworkers)
+        return 'mpirun -np {} --hostfile hostfile'.format(nworkers)
     elif language == 'chapel' and implementation == 'dm':
-        return '-nl {workers}'.format(nworkers)
+        return '-nl {}'.format(nworkers)
 
     return ''
 
