@@ -107,7 +107,7 @@ def get_cmd_options(language, implementation, nworkers):
 
 def run_cmd(cmd, language, implementation, env=None):
     result = subprocess.run(cmd.split(' '), stdout=subprocess.PIPE, env=env)
-    output = result.stdout.decode('utf-8')
+    output = result.stdout.decode('utf-8').strip()
     if language == 'julia' and implementation == 'dm':
         return float(output.split('\n')[-1])
     else:
@@ -148,9 +148,9 @@ def main(args):
                         print(problem_time)
                         problem_times.append(problem_time)
                         time.sleep(SLEEP_TIME)
-                    except:
-                        print("failed")
-            
+                    except Exception as e:
+                        print("error: " + str(e))
+
                 results.append({
                     'problem': problem,
                     'language': language,
