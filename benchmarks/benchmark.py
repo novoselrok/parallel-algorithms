@@ -95,7 +95,7 @@ def get_env(language, implementation, nworkers):
 def get_cmd_options(language, implementation, nworkers):
     if language == 'julia':
         if not IS_LOCAL and implementation == 'dm':
-            return '/home/guest/roknovosel/julia-1.0.3/bin/julia --machine-file hostfile -p {workers}'.format(nworkers)
+            return '/home/guest/roknovosel/julia-1.1.0/bin/julia --machine-file hostfile -p {workers}'.format(nworkers)
         else:
             return '/home/rok/julia-1.1.0/bin/julia'
     elif language == 'c' and implementation == 'dm':
