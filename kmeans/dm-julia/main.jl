@@ -93,7 +93,7 @@ function main(args)
     end
 
     elapsed = (time_ns() - start) / 1.0e9
-    writedlm("out.txt", labels)
+    # writedlm("out.txt", labels)
     elapsed
 end
 
@@ -103,3 +103,4 @@ for i in 1:nprecompilesteps
     push!(times, main(ARGS))
 end
 println(minimum(times))
+

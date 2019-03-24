@@ -51,3 +51,4 @@ for i in 1:nprecompilesteps
     push!(times, main(ARGS))
 end
 println(minimum(times))
+

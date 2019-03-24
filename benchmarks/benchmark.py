@@ -99,15 +99,19 @@ def get_cmd_options(language, implementation, nworkers):
         else:
             return '/home/rok/julia-1.1.0/bin/julia'
     elif language == 'c' and implementation == 'dm':
-        return 'mpirun -np {} --hostfile hostfile'.format(nworkers)
+        return 'mpirun.mpich -np {} --hostfile hostfile'.format(nworkers)
     elif language == 'chapel' and implementation == 'dm':
         return '-nl {}'.format(nworkers)
 
     return ''
 
-def run_cmd(cmd, env=None):
+def run_cmd(cmd, language, implementation, env=None):
     result = subprocess.run(cmd.split(' '), stdout=subprocess.PIPE, env=env)
-    return float(result.stdout.decode('utf-8'))
+    output = result.stdout.decode('utf-8')
+    if language == 'julia' and implementation == 'dm':
+        return float(output.split('\n')[-1])
+    else:
+        return float(output)
 
 def main(args):
     print(BASE_DIR)
@@ -135,17 +139,17 @@ def main(args):
                     **problem_inputs['consts']
                 }
                 cmd = problem_inputs['executables'][language].format(**problem_input)
-                print(cmd, nworkers)
+                print(cmd, "nworkers=", nworkers)
 
                 problem_times = []
                 for _ in range(N_REPEATS):
                     try:
-                        problem_time = run_cmd(cmd, get_env(language, implementation, nworkers))
+                        problem_time = run_cmd(cmd, language, implementation, get_env(language, implementation, nworkers))
                         print(problem_time)
                         problem_times.append(problem_time)
                         time.sleep(SLEEP_TIME)
                     except:
-                        print(e)
+                        print("failed")
             
                 results.append({
                     'problem': problem,
