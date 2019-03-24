@@ -303,7 +303,6 @@ module Worker {
         }
 
         for iteration in 0..#iterations {
-            writeln(iteration);
             try! stdout.flush();
             var myUniverseBounds = getUniverseSize(bodies);
             var (universeMin, universeMax) = myUniverseBounds;
@@ -422,19 +421,19 @@ module Worker {
             freeCell(root);
         }
 
-        var filename = "out" + here.id + ".txt";
-        try {
-            var outf = open(filename, iomode.cw);
-            var writer = outf.writer();
+        // var filename = "out" + here.id + ".txt";
+        // try {
+        //     var outf = open(filename, iomode.cw);
+        //     var writer = outf.writer();
 
-            for body in bodies {
-                writer.writeln("%i %er %er %er %er %er %er".format(body.id, body.position[X], body.position[Y], body.position[Z], body.velocity[X], body.velocity[Y], body.velocity[Z]));
-            }
+        //     for body in bodies {
+        //         writer.writeln("%i %er %er %er %er %er %er".format(body.id, body.position[X], body.position[Y], body.position[Z], body.velocity[X], body.velocity[Y], body.velocity[Z]));
+        //     }
 
-            writer.close();
-            outf.close();
-        } catch e {
-            writeln(e);
-        }
+        //     writer.close();
+        //     outf.close();
+        // } catch e {
+        //     writeln(e);
+        // }
     }
 }

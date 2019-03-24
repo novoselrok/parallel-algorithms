@@ -14,7 +14,6 @@ function main()
     velocities = [SVector{3, Float64}(data[i, 4:6]) for i in 1:n]
     masses = data[:, 7]
 
-    # println("Done reading.")
     start = time_ns()
     for iter in 1:iterations
         # zero(type) returns additive identity

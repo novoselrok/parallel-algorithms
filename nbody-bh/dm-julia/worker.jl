@@ -99,14 +99,11 @@ end
     all_work_above = work_above
 
     for partner in group_partners
-         #println("put partner ", partner, " ", (work_below, work_above)); flush(stdout)
         put!(partner, (work_below, work_above))
     end
 
     for i in 1:length(group_partners)
-        # println("take my channel"); flush(stdout)
         (other_work_below, other_work_above) = take!(my_channel)
-        # println("taken ", (other_work_below, other_work_above)); flush(stdout)
         all_work_below += other_work_below
         all_work_above += other_work_above
     end
@@ -124,16 +121,13 @@ end
     group_partners::Array{RemoteChannel{FloatCh}})
 
     fmin = frac_weight_below(bodies, min, coord, my_channel, group_partners)
-    println("fmin ", fmin); flush(stdout)
     mid = 0.0
 
     iter = 0
     while iter < BISECTION_MAX_ITER && abs((max - min) / 2) > BISECTION_TOL
         mid = (min + max) / 2
         fmid = frac_weight_below(bodies, mid, coord, my_channel, group_partners)
-        println("fmid ", fmid); flush(stdout)
         if abs(fmid) < BISECTION_TOL
-            # println("breaking"); flush(stdout)
             break
         elseif fmin * fmid > 0
             min = mid
@@ -142,7 +136,6 @@ end
         end
 
         iter += 1
-        # println("bisection iter ", iter); flush(stdout)
     end
 
     mid
@@ -171,7 +164,6 @@ end
 
     n_splits = convert(Int, log2(world_size))
     for i in 0:n_splits-1
-        # println("orb i ", i); flush(stdout)
         n_procs_left = convert(Int, world_size / (2^i));
 
         group = group << 1
@@ -181,12 +173,9 @@ end
 
         group_partners = determine_group_partners(group, group_channels, float_channels)
 
-        # println("group_partners ", group_partners); flush(stdout)
         coord = (i % DIMS) + 1
 
         split = bisection(my_min[coord], my_max[coord], bodies, coord, float_channels[ob_rank], group_partners)
-
-        println("split ", split); flush(stdout)
 
         above_split = is_above_split(zb_rank, n_procs_left)
 
@@ -204,8 +193,6 @@ end
         push!(my_bounds, (my_min, my_max))
         push!(other_bounds, (other_min, other_max))
 
-        # println((other_min, other_max))
-
         my_bodies = []
         other_bodies = []
 
@@ -220,12 +207,10 @@ end
         # partner rank used for indexing into the body channels
         partner_rank = get_partner_rank(zb_rank, n_procs_left) + 1
         push!(partners, (partner_rank, above_split))
-        # println(length(my_bodies), " ", length(other_bodies), " ", partner_rank)
         put!(bodies_channels[partner_rank], other_bodies)
         recv_bodies = take!(bodies_channels[ob_rank])
 
         bodies = vcat(my_bodies, recv_bodies)
-        println(zb_rank, " ", (bodies))
         my_min = copy(my_min)
         my_max = copy(my_max)
     end
@@ -248,7 +233,6 @@ end
     bodies::Array{Body} = copy(input_bodies)
 
     for iter in 1:iterations
-        # println("iter ", iter)
         (universe_min, universe_max) = get_universe_size(bodies)
 
         for body in bodies
@@ -267,13 +251,9 @@ end
             universe_min = min.(universe_min, other_universe_min)
             universe_max = max.(universe_max, other_universe_max)
         end
-        # println("universe size ", universe_min, universe_max)
-
-        println((universe_min, universe_max))
 
         # ORB
         (bodies, my_bounds, other_bounds, partners) = orb(bodies, universe_min, universe_max, bodies_channels, group_channels, float_channels)
-        # println(length(bodies), " ", typeof(bodies))
 
         root = Cell()
         root.min_bounds = universe_min
@@ -285,11 +265,8 @@ end
         end
 
         for body in bodies
-            # println("Inserting body.id = ", body.id)
             insert_body(root, body)
         end
-
-        # println("root.cm = ", root.cm)
 
         for i in 1:length(my_bounds)
             (my_min, my_max) = my_bounds[i]
@@ -297,10 +274,8 @@ end
 
             cells_to_send = get_cells_to_send(root, Cell(), other_min, other_max, i - 1, 0, Array{Cell}([]))
             packed = pack_cells(cells_to_send)
-            println("cells_to_send_len: ", length(cells_to_send))
 
             (partner, above_split) = partners[i]
-            # println("partner ", partner)
             put!(cell_channels[partner], packed)
             recv_cells = take!(cell_channels[ob_rank])
             root_cells = reconstruct_received_cells(recv_cells)
@@ -308,11 +283,8 @@ end
             for root_cell in root_cells
                 insert_cell(root, root_cell)
             end
-
-            println("root_cells_len ", length(root_cells))
         end
 
-        # println("after exchange root.cm = ", root.cm, " root.mass = ", root.mass)
         for body in bodies
             elapsed_force_time = @elapsed compute_force(root, body)
             body.work = elapsed_force_time

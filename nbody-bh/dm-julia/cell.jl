@@ -90,24 +90,18 @@ end
     min_depth::Int,
     depth::Int,
     cells_to_send::Array{Cell})
-    # println("depth: ", depth)
+
     if depth > min_depth
         cell.parent_idx = depth - min_depth == 1 ? -1 : parent.array_idx
         cell.array_idx = length(cells_to_send) + 1
-        # println("push")
         push!(cells_to_send, cell)
     end
 
     size = sum(cell.max_bounds .- cell.min_bounds)
     bounds_center = (max_bounds .- min_bounds) ./ 2
     d = distance(cell.cm, bounds_center)
-    # println("minmax bounds ", (min_bounds, max_bounds))
-    # println("cell cm ", cell.cm)
-    # println("cell bounds ", cell.max_bounds .- cell.min_bounds)
-    # println("size = ", size, " distance = ", d, " ratio = ", size / d)
 
     if size / d >= THETA
-        # println("cell children: ", cell.children)
         for i in 1:N_CELL_CHILDREN
             if isassigned(cell.children, i) && cell.children[i].mass != 0.0
                 get_cells_to_send(cell.children[i], cell, min_bounds, max_bounds, min_depth, depth + 1, cells_to_send)
@@ -199,8 +193,6 @@ end
         cell.cm = (cell.mass .* cell.cm .+ body.mass .* body.position) ./ (cell.mass + body.mass)
         cell.mass += body.mass
     end
-
-    # println(cell.cm)
 end
 
 @everywhere function add_force(body::Body, position::Vec3, mass::Float64)::Nothing

@@ -45,11 +45,9 @@ function main(args)
     (time_ns() - start_time) / 1.0e9
 end
 
-println(ARGS)
 nprecompilesteps = haskey(ENV, "JL_NRETRIES") ? parse(Int, ENV["JL_NRETRIES"]) : 0
 times = []
 for i in 1:nprecompilesteps
-    println(times)
     push!(times, main(ARGS))
 end
 println(minimum(times))
