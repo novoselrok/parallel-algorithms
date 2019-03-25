@@ -106,7 +106,8 @@ def get_cmd_options(language, implementation, nworkers):
     return ''
 
 def run_cmd(cmd, language, implementation, env=None):
-    result = subprocess.run(cmd.split(' '), stdout=subprocess.PIPE, env=env)
+    cmd_list = [arg for arg in cmd.strip().split(' ') if arg]
+    result = subprocess.run(cmd_list, stdout=subprocess.PIPE, env=env)
     output = result.stdout.decode('utf-8').strip()
     if language == 'julia' and implementation == 'dm':
         return float(output.split('\n')[-1])

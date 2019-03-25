@@ -138,7 +138,7 @@ function subsort(bins::BINS_TYPE, nkeys::Int, m::Int)
 end
 
 function main(args)
-    arr = trunc(Array{Int, 1}, readdlm(args[1])[:, 1])
+    arr = convert(Array{Int, 1}, readdlm(args[1])[:, 1])
     nbins = nthreads()
     
     start = time_ns()
