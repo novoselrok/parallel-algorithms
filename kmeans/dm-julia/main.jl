@@ -2,9 +2,8 @@ using Distributed
 using DelimitedFiles
 @everywhere using LinearAlgebra
 @everywhere using StaticArrays
-@everywhere using SharedArrays
 
-import Base.+
+@everywhere import Base.+
 
 @everywhere const POINT_SIZE = 128
 # Type alias for Point type
@@ -16,6 +15,7 @@ import Base.+
    point_sum::Point
    mean::Point
 end
+@everywhere const ClustersCh = Channel{Array{Cluster}}
 
 # Constructor
 @everywhere Cluster() = Cluster(0, Point(zeros(POINT_SIZE)), Point(zeros(POINT_SIZE)))
@@ -35,15 +35,14 @@ end
     cluster.mean = cluster.point_sum ./ cluster.size
 end
 
-function +(cluster1::Cluster, cluster2::Cluster)
+@everywhere function +(cluster1::Cluster, cluster2::Cluster)
     Cluster(cluster1.size + cluster2.size, cluster1.point_sum .+ cluster2.point_sum, cluster1.mean)
 end
 
-@everywhere function compute_local_labels_and_clusters(k::Int, points::SharedArray{Point}, labels::SharedArray{Int64}, clusters::Array{Cluster})
-    local_indices = localindices(points)
+@everywhere function compute_local_labels_and_clusters(k::Int, points::Array{Point}, clusters::Array{Cluster})
     new_clusters = [Cluster() for _ in 1:k]
-
-    for point_idx in local_indices
+    labels = zeros(length(points))
+    for point_idx in 1:length(points)
         point = points[point_idx]
         min_value = Inf
         min_index = 0
@@ -58,7 +57,33 @@ end
         add_point(new_clusters[min_index], point)
     end
 
-    new_clusters
+    (new_clusters, labels)
+end
+
+@everywhere function work(k::Int, max_iter::Int, points::Array{Point}, initial_clusters::Array{Cluster}, clusters_channels::Array{RemoteChannel{ClustersCh}})
+    clusters = copy(initial_clusters)
+    rank = myid()
+    labels::Array{Int} = []
+    for iter in 1:max_iter
+        (my_clusters, labels) = compute_local_labels_and_clusters(k, points, clusters)
+
+        for worker in workers()
+            if worker != rank
+                put!(clusters_channels[worker - 1], my_clusters)
+            end
+        end
+
+        all_clusters::Array{Array{Cluster}} = [my_clusters]
+        
+        for _ in 1:nworkers() - 1
+            push!(all_clusters, take!(clusters_channels[rank - 1]))
+        end
+
+        new_clusters = sum(all_clusters)
+        [calc_mean(cluster) for cluster in new_clusters]
+        clusters = new_clusters
+    end
+    labels
 end
 
 function main(args)
@@ -71,29 +96,40 @@ function main(args)
     # Input points
     points_read = readdlm(filename)::Array{Float64, 2}
     num_points = size(points_read, 1)
-    points::SharedArray{Point} = SharedArray{Point}([Point(points_read[i, :]) for i in 1:num_points])
-    labels::SharedArray{Int64} = SharedArray{Int64}(zeros(num_points))
+    points::Array{Point} = [Point(points_read[i, :]) for i in 1:num_points]
     clusters::Array{Cluster} = []
+    world_size = nworkers()
 
     # Algorithm
-    start = time_ns()
+    start_time = time_ns()
+    clusters_channels = [RemoteChannel(()->ClustersCh(world_size)) for _ in 1:world_size]
 
     @inbounds for i in 1:k
         idx = trunc(Int64, floor(rand() * num_points + 1))
         push!(clusters, Cluster(points[idx]))
     end
 
-    @inbounds for iter in 1:max_iter
-        tasks = @sync [@spawnat worker compute_local_labels_and_clusters(k, points, labels, clusters) for worker in workers()]
-        computed_new_clusters = [fetch(task) for task in tasks]
+    tasks = []
+    @elapsed @sync for worker in workers()
+        zb_rank = worker - 2
 
-        new_clusters = sum(computed_new_clusters)
-        [calc_mean(cluster) for cluster in new_clusters]
-        clusters = new_clusters
+        blocksize = div(num_points + world_size - 1, world_size)
+        start = zb_rank * blocksize
+        end_ = min(start + blocksize, num_points)
+        start += 1
+        subarray_size = end_ - start + 1
+        
+        task = @spawnat worker work(k, max_iter, points[start:end_], clusters, clusters_channels)
+        push!(tasks, task)
     end
 
-    elapsed = (time_ns() - start) / 1.0e9
-    # writedlm("out.txt", labels)
+    labels::Array{Int64} = []
+    for task in tasks
+        append!(labels, fetch(task))
+    end
+
+    elapsed = (time_ns() - start_time) / 1.0e9
+    writedlm("out.txt", labels)
     elapsed
 end
 
