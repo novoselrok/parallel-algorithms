@@ -1,9 +1,9 @@
 using Distributed
 using DelimitedFiles
-@everywhere using SharedArrays
 
 const OVERSAMPLING_FACTOR = 128
 const BINS_TYPE = Array{Array{Int,1},1}
+@everywhere const IntArrayCh = Channel{Array{Int64,1}}
 
 ### QuickSort
 @everywhere function partition(arr::Array{Int}, left::Int, right::Int)
@@ -38,7 +38,7 @@ end
 end
 ### 
 
-function get_sample_keys(arr::SharedArray{Int}, m::Int)
+function get_sample_keys(arr::Array{Int}, m::Int)
     sampled_keys = zeros(m * OVERSAMPLING_FACTOR)
     for i in 1:length(sampled_keys)
         sampled_keys[i] = arr[i]
@@ -74,32 +74,30 @@ end
     index
 end
 
-@everywhere function compute_bin_array(arr::SharedArray{Int}, sample_keys::Array{Int}, m::Int)
-    local_indices = localindices(arr)
-    subarray_size = length(local_indices)
-    bins = [[] for _ in 1:m]
+@everywhere function compute_bin_array(arr::Array{Int}, sample_keys::Array{Int}, m::Int)
+    bins::Array{Array{Int}} = [[] for _ in 1:m]
 
-    index = map_keys_to_bins(@view(arr[local_indices]), sample_keys, m)
-    for (bin_idx, key_idx) in zip(index, local_indices)
+    index = map_keys_to_bins(arr, sample_keys, m)
+    for (key_idx, bin_idx) in enumerate(index)
         push!(bins[bin_idx], arr[key_idx])
     end
     bins
 end
 
-@everywhere function bin_subsort(arr::SharedArray{Int}, sample_keys::Array{Int,1}, m::Int, channels::Array{RemoteChannel{Channel{Array{Int64,1}}},1})
-    workerid = myid() - 1
+@everywhere function bin_subsort(arr::Array{Int}, sample_keys::Array{Int,1}, m::Int, channels::Array{RemoteChannel{IntArrayCh}})
+    ob_rank = myid() - 1
     bins = compute_bin_array(arr, sample_keys, m)
     
     for (idx, channel) in enumerate(channels)
-        if idx == workerid
+        if idx == ob_rank
             continue
         end
         put!(channel, bins[idx])
     end
-    subarray::Array{Int,1} = bins[workerid]
+    subarray::Array{Int,1} = bins[ob_rank]
     received_arrays = m - 1
     while received_arrays > 0
-        received_array = take!(channels[workerid])
+        received_array = take!(channels[ob_rank])
         subarray = vcat(subarray, received_array)
         received_arrays -= 1
     end
@@ -109,18 +107,33 @@ end
 
 function main(args)
     arr = convert(Array{Int, 1}, readdlm(args[1])[:, 1])
-    arr = SharedArray{Int}(arr)
     nbins = nworkers()
     
-    start = time_ns()
+    start_time = time_ns()
     sample_keys = get_sample_keys(arr, nbins)
-    channels = [RemoteChannel(()->Channel{Array{Int,1}}(nbins)) for _ in 1:nworkers()]
+    nkeys = length(arr)
+    channels = [RemoteChannel(()->IntArrayCh(nbins)) for _ in 1:nworkers()]
 
-    sorted_array = @sync @distributed (vcat) for i in 1:nbins
-        bin_subsort(arr, sample_keys, nbins, channels)
+    tasks = []
+    @sync for worker in workers()
+        zb_rank = worker - 2
+
+        blocksize = div(nkeys + nbins - 1, nbins)
+        start = zb_rank * blocksize
+        end_ = min(start + blocksize, nkeys)
+        start += 1
+        subarray_size = end_ - start + 1
+
+        task = @spawnat worker bin_subsort(arr[start:end_], sample_keys, nbins, channels)
+        push!(tasks, task)
     end
 
-    elapsed = (time_ns() - start) / 1.0e9
+    sorted_array::Array{Int64} = []
+    for task in tasks
+        append!(sorted_array, fetch(task))
+    end
+
+    elapsed = (time_ns() - start_time) / 1.0e9
 
     for i in 1:length(sorted_array) - 1
         if sorted_array[i] > sorted_array[i + 1]

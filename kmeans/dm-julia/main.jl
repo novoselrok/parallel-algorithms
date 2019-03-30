@@ -110,7 +110,7 @@ function main(args)
     end
 
     tasks = []
-    @elapsed @sync for worker in workers()
+    @sync for worker in workers()
         zb_rank = worker - 2
 
         blocksize = div(num_points + world_size - 1, world_size)
