@@ -2,7 +2,6 @@ use Sort;
 use Random;
 use Time;
 
-config const filename = "../data/arr10.txt";
 config const nkeys = 10;
 
 const OVERSAMPLING_FACTOR = 128;
@@ -151,42 +150,55 @@ proc subsort(m: int, bins: [{0..#m}][{0..#m}] unmanaged BinArray) {
     return sortedArray;
 }
 
-proc main() {
-    // var nkeys = 20;
-    // var arr: [{0..#nkeys}] int = [10, 18, 16, 14, 0, 17, 11, 2, 3, 9, 5, 7, 4, 19, 6, 15, 8, 1, 13, 12];
-    var arr: [{0..#nkeys}] int;
-    var nbins = here.maxTaskPar;
-    var f = open(filename, iomode.r);
-    var reader = f.reader();
-    reader.read(arr);
-    f.close();
-    reader.close();
+param REPEAT = 100;
+param MY_RAND_MAX = (1 << 31) - 1;
 
-    var watch: Timer;
-    watch.start();
-
-    // Init bins
-    var bins: [{0..#nbins}][{0..#nbins}] unmanaged BinArray;
-    for i in 0..#nbins {
-        for j in 0..#nbins {
-            bins[i][j] = new unmanaged BinArray();
-        }
-    }
-
-    bin(arr, nbins, bins);
-
-    var sortedArray = subsort(nbins, bins);
-
-    writeln(watch.elapsed());
-
-    if !isSorted(sortedArray) {
-        writeln("Array not sorted!");
-    }
-
-    for i in 0..#nbins {
-        for j in 0..#nbins {
-            delete bins[i][j];
-        }
-    }
-
+proc getRandomNumber(seed: int) {
+    return (seed * 1103515245 + 12345) & MY_RAND_MAX;
 }
+
+proc initRandomArray(n: int, initialSeed: int) {
+    var arr: [{0..#n}] int;
+    var randomNum = getRandomNumber(initialSeed);
+    for i in 0..#n {
+        arr[i] = randomNum;
+        randomNum = getRandomNumber(randomNum);
+    }
+    return arr;
+}
+
+proc main() {
+    var times: [{0..#REPEAT}] real;
+    for i in 0..#REPEAT {
+        var arr = initRandomArray(nkeys, i + 1);
+        var nbins = here.maxTaskPar;
+        var watch: Timer;
+        watch.start();
+
+        // Init bins
+        var bins: [{0..#nbins}][{0..#nbins}] unmanaged BinArray;
+        for i in 0..#nbins {
+            for j in 0..#nbins {
+                bins[i][j] = new unmanaged BinArray();
+            }
+        }
+
+        bin(arr, nbins, bins);
+
+        var sortedArray = subsort(nbins, bins);
+
+        times[i] = watch.elapsed();
+
+        if !isSorted(sortedArray) {
+            writeln("Array not sorted!");
+        }
+
+        for i in 0..#nbins {
+            for j in 0..#nbins {
+                delete bins[i][j];
+            }
+        }
+    }
+    writeln((+ reduce times) / REPEAT);
+}
+

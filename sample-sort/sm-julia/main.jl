@@ -137,24 +137,45 @@ function subsort(bins::BINS_TYPE, nkeys::Int, m::Int)
     sorted_subarrays
 end
 
-function main(args)
-    arr = convert(Array{Int, 1}, readdlm(args[1])[:, 1])
-    nbins = nthreads()
-    
-    start = time_ns()
-    
-    @inbounds bins = bin(arr, nbins)
-    @inbounds sorted_array = subsort(bins, length(arr), nbins)
-    
-    elapsed = (time_ns() - start) / 1.0e9
+const REPEAT = 100
+const MY_RAND_MAX = ((1 << 31) - 1)
 
-    for i in 1:length(sorted_array) - 1
-        if sorted_array[i] > sorted_array[i + 1]
-            println("Array not sorted.")
-            exit(1)
-        end
+function get_random_number(seed::Int)
+    (seed * 1103515245 + 12345) & MY_RAND_MAX
+end
+
+function init_random_array(n::Int, initial_seed::Int)
+    arr::Array{Int} = zeros(n)
+    random_num = get_random_number(initial_seed)
+    for i in 1:n
+        arr[i] = random_num
+        random_num = get_random_number(random_num)
     end
-    elapsed
+    arr
+end
+
+function main(args)
+    times = []
+    n = parse(Int64, args[1])
+
+    for iter in 1:REPEAT
+        arr = init_random_array(n, iter)
+        nbins = nthreads()
+        start = time_ns()
+        @inbounds bins = bin(arr, nbins)
+        @inbounds sorted_array = subsort(bins, length(arr), nbins)
+        
+        elapsed = (time_ns() - start) / 1.0e9
+
+        for i in 1:length(sorted_array) - 1
+            if sorted_array[i] > sorted_array[i + 1]
+                println("Array not sorted.")
+                exit(1)
+            end
+        end
+        push!(times, elapsed)
+    end
+    sum(times) / REPEAT
 end
 
 nprecompilesteps = haskey(ENV, "JL_NRETRIES") ? parse(Int, ENV["JL_NRETRIES"]) : 0

@@ -175,72 +175,81 @@ void subsort(T* sorted_array, T*** bins, int** tally, int m) {
     }
 }
 
+#define REPEAT 100
+#define MY_RAND_MAX ((1U << 31) - 1)
+int get_random_number(unsigned int seed) {
+    return (seed * 1103515245 + 12345) & MY_RAND_MAX;
+}
+
+void init_random_array(int* arr, int length, int initial_seed) {
+    int random_num = get_random_number(initial_seed);
+    for (int i = 0; i < length; i++) {
+        arr[i] = random_num;
+        random_num = get_random_number(random_num);
+    }
+}
+
 int main(int argc, char const *argv[]) {
-    // srand(1234);
+    int n = atoi(argv[1]);
+    double times[REPEAT];
 
-    // T arr[20] = {10, 18, 16, 14, 0, 17, 11, 2, 3, 9, 5, 7, 4, 19, 6, 15, 8, 1, 13, 12};
-    // int n = 20;
-    FILE* f;
-    f = fopen(argv[1], "r");
-    if (f == NULL) {
-        printf("File does not exist.\n");
-        exit(1);
-    }
-    int n = atoi(argv[2]);
+    for (int iter = 0; iter < REPEAT; iter++) {
+        T* arr = malloc(sizeof(T) * n);
+        init_random_array(arr, n, iter + 1);
 
-    T* arr = malloc(sizeof(T) * n);
-    for (int i = 0; i < n; i++) {
-        T tmp;
-        fscanf(f, "%d", &tmp);
-        arr[i] = tmp;
-    }
-    fclose(f);
-
-    int m = get_number_of_bins();
-    double begin = omp_get_wtime();
-    // 3D array containing keys (array elements) broken down into bins
-    // Each thread owns #thread_id row when binning (1st phase)
-    // and #thread_id column when subsorting (2nd phase)
-    T*** bins = (T***) malloc(sizeof(T**) * m);
-    for (int i = 0; i < m; i++) {
-        bins[i] = (T**) malloc(sizeof(T*) * m);
-    }
-
-    // 2D array containg the number of elements in each bin
-    int** tally = (int**) malloc(sizeof(int*) * m);
-    for (int i = 0; i < m; i++) {
-        tally[i] = (int*) malloc(sizeof(int) * m);
-
-        for (int j = 0; j < m; j++) {
-            tally[i][j] = 0;
+        int m = get_number_of_bins();
+        double begin = omp_get_wtime();
+        // 3D array containing keys (array elements) broken down into bins
+        // Each thread owns #thread_id row when binning (1st phase)
+        // and #thread_id column when subsorting (2nd phase)
+        T*** bins = (T***) malloc(sizeof(T**) * m);
+        for (int i = 0; i < m; i++) {
+            bins[i] = (T**) malloc(sizeof(T*) * m);
         }
-    }
 
-    bin(arr, n, bins, tally, m);
+        // 2D array containg the number of elements in each bin
+        int** tally = (int**) malloc(sizeof(int*) * m);
+        for (int i = 0; i < m; i++) {
+            tally[i] = (int*) malloc(sizeof(int) * m);
 
-    T* sorted_array = (T*) malloc(sizeof(T) * n);
-    subsort(sorted_array, bins, tally, m);
-    printf("%.16g\n", omp_get_wtime() - begin);
-
-    for (int i = 0; i < n - 1; i++) {
-        if (sorted_array[i] > sorted_array[i + 1]) {
-            printf("Array not sorted!\n");
-            exit(1);
+            for (int j = 0; j < m; j++) {
+                tally[i][j] = 0;
+            }
         }
-    }
 
-    // Cleanup
-    free(sorted_array);
+        bin(arr, n, bins, tally, m);
 
-    for (int i = 0; i < m; i++) {
-        for (int j = 0; j < m; j++) {
-            free(bins[i][j]);
+        T* sorted_array = (T*) malloc(sizeof(T) * n);
+        subsort(sorted_array, bins, tally, m);
+        times[iter] = omp_get_wtime() - begin;
+
+        for (int i = 0; i < n - 1; i++) {
+            if (sorted_array[i] > sorted_array[i + 1]) {
+                printf("Array not sorted!\n");
+                exit(1);
+            }
         }
-        free(tally[i]);
-        free(bins[i]);
-    }
 
-    free(tally);
-    free(bins);
+        // Cleanup
+        free(sorted_array);
+
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < m; j++) {
+                free(bins[i][j]);
+            }
+            free(tally[i]);
+            free(bins[i]);
+        }
+
+        free(tally);
+        free(bins);
+        free(arr);
+    }
+    double times_sum = 0.0;
+    for (int i = 0; i < REPEAT; i++) {
+        times_sum += times[i];
+    }
+    printf("%f\n", times_sum / REPEAT);
+
     return 0;
 }

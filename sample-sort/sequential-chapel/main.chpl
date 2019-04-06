@@ -2,7 +2,6 @@ use Sort;
 use Time;
 use Random;
 
-config const filename = "../data/arr10.txt";
 config const nkeys = 10;
 
 proc partition(arr: [] int, left_: int, right_: int) {
@@ -39,17 +38,34 @@ proc myqsort(arr: [] int) {
     myqsort(arr, 0, arr.size - 1);
 }
 
-proc main() {
-    var arr: [{0..#nkeys}] int;
+param REPEAT = 100;
+param MY_RAND_MAX = (1 << 31) - 1;
 
-    var f = open(filename, iomode.r);
-    var reader = f.reader();
-    reader.read(arr);
-    f.close();
-    reader.close();
-
-    var watch: Timer;
-    watch.start();
-    myqsort(arr);
-    writeln(watch.elapsed());
+proc getRandomNumber(seed: int) {
+    return (seed * 1103515245 + 12345) & MY_RAND_MAX;
 }
+
+proc initRandomArray(n: int, initialSeed: int) {
+    var arr: [{0..#n}] int;
+    var randomNum = getRandomNumber(initialSeed);
+    for i in 0..#n {
+        arr[i] = randomNum;
+        randomNum = getRandomNumber(randomNum);
+    }
+    return arr;
+}
+
+proc main() {
+    var times: [{0..#REPEAT}] real;
+
+    for i in 0..#REPEAT {
+        var arr = initRandomArray(nkeys, i + 1);
+        var watch: Timer;
+        watch.start();
+        myqsort(arr);
+        times[i] = watch.elapsed();
+    }
+
+    writeln((+ reduce times) / REPEAT);
+}
+

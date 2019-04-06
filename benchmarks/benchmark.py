@@ -48,9 +48,9 @@ inputs = {
         'sizes': [10000000, 20000000, 40000000, 80000000],
         'consts': {},
         'executables': {
-            'c': '{cmdoptions} {exepath}/main {inputfile} {inputsize}',
-            'julia': '{cmdoptions} -O3 --check-bounds=no --math-mode=fast {exepath}/main.jl {inputfile}',
-            'chapel': '{exepath}/main {cmdoptions} --filename={inputfile} --nkeys={inputsize}'
+            'c': '{cmdoptions} {exepath}/main {inputsize}',
+            'julia': '{cmdoptions} -O3 --check-bounds=no --math-mode=fast {exepath}/main.jl {inputsize}',
+            'chapel': '{exepath}/main {cmdoptions} --nkeys={inputsize}'
         }
     },
     'nbody-bh': {
@@ -74,14 +74,14 @@ def get_input_file_postfix(language, problem):
         return '.chpl'
     return ''
 
-def get_env(language, implementation, nworkers):
+def get_env(language, problem, implementation, nworkers):
     language_env_vars = env_vars[language]
     env = {}
     if implementation != 'dm':
         env[language_env_vars['nthreads']] = str(nworkers)
 
     if language == 'julia':
-        env['JL_NRETRIES'] = str(3)
+        env['JL_NRETRIES'] = str(3) if problem != 'sample-sort' else str(1)
     
     if language == 'chapel' and implementation == 'dm':
         env['CHPL_TARGET_ARCH'] = 'native'
@@ -145,7 +145,7 @@ def main(args):
                 problem_times = []
                 for _ in range(N_REPEATS):
                     try:
-                        problem_time = run_cmd(cmd, language, implementation, get_env(language, implementation, nworkers))
+                        problem_time = run_cmd(cmd, language, implementation, get_env(language, problem, implementation, nworkers))
                         print(problem_time)
                         problem_times.append(problem_time)
                         time.sleep(SLEEP_TIME)

@@ -27,26 +27,45 @@ function myqsort(arr::Array{Int}, left::Int, right::Int)
     myqsort(arr, pivot_idx, right)
 end
 
-
 function myqsort(arr::Array{Int})
     @inbounds myqsort(arr, 1, length(arr))
 end
 
-function main(args)
-    # arr = [10, 18, 16, 14, 0, 17, 11, 2, 3, 9, 5, 7, 4, 19, 6, 15, 8, 1, 13, 12]
-    arr = convert(Array{Int, 1}, readdlm(args[1])[:, 1])
+const REPEAT = 100
+const MY_RAND_MAX = ((1 << 31) - 1)
 
-    start = time_ns()
-    myqsort(arr)
-    elapsed = ((time_ns() - start) / 1.0e9)
+function get_random_number(seed::Int)
+    (seed * 1103515245 + 12345) & MY_RAND_MAX
+end
 
-    for i in 1:length(arr) - 1
-        if arr[i] > arr[i + 1]
-            println("Array not sorted.")
-            exit(1)
-        end
+function init_random_array(n::Int, initial_seed::Int)
+    arr::Array{Int} = zeros(n)
+    random_num = get_random_number(initial_seed)
+    for i in 1:n
+        arr[i] = random_num
+        random_num = get_random_number(random_num)
     end
-    elapsed
+    arr
+end
+
+function main(args)
+    times = []
+    n = parse(Int64, args[1])
+    for iter in 1:REPEAT
+        arr = init_random_array(n, iter)
+        start = time_ns()
+        myqsort(arr)
+        elapsed = ((time_ns() - start) / 1.0e9)
+    
+        for i in 1:length(arr) - 1
+            if arr[i] > arr[i + 1]
+                println("Array not sorted.")
+                exit(1)
+            end
+        end
+        push!(times, elapsed)
+    end
+    sum(times) / REPEAT
 end
 
 nprecompilesteps = haskey(ENV, "JL_NRETRIES") ? parse(Int, ENV["JL_NRETRIES"]) : 0
