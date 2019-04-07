@@ -5,9 +5,10 @@ import itertools
 import json
 import time
 import socket
+import numpy as np
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-N_REPEATS = 5
+N_REPEATS = 3
 NUM_WORKERS = [1, 2, 4, 8, 16]
 INPUT_FILE_TEMPLATE = 'test_{size}{postfix}.txt'
 SLEEP_TIME = 1
@@ -92,7 +93,7 @@ def get_env(language, problem, implementation, nworkers):
 
     return env
 
-def get_cmd_options(language, implementation, nworkers):
+def get_cmd_options(language, problem, implementation, nworkers):
     if language == 'julia':
         if not IS_LOCAL and implementation == 'dm':
             return '/home/guest/roknovosel/julia-1.1.0/bin/julia --machine-file hostfile.{}'.format(nworkers)
@@ -105,7 +106,7 @@ def get_cmd_options(language, implementation, nworkers):
 
     return ''
 
-def run_cmd(cmd, language, implementation, env=None):
+def run_cmd(cmd, language, problem, implementation, env=None):
     cmd_list = [arg for arg in cmd.strip().split(' ') if arg]
     result = subprocess.run(cmd_list, stdout=subprocess.PIPE, env=env)
     output = result.stdout.decode('utf-8').strip()
@@ -133,7 +134,7 @@ def main(args):
 
             for nworkers in workers[implementation]:
                 problem_input = {
-                    'cmdoptions': get_cmd_options(language, implementation, nworkers),
+                    'cmdoptions': get_cmd_options(language, problem, implementation, nworkers),
                     'exepath': path_to_implementation,
                     'inputfile': input_file,
                     'inputsize': size,
@@ -145,7 +146,16 @@ def main(args):
                 problem_times = []
                 for _ in range(N_REPEATS):
                     try:
-                        problem_time = run_cmd(cmd, language, implementation, get_env(language, problem, implementation, nworkers))
+                        if language == 'chapel' and problem == 'sample-sort' and implementation != 'sequential':
+                            times = []
+                            for initial_seed in range(100):
+                                new_cmd = cmd + ' --initialSeed=' + str(initial_seed)
+                                t = run_cmd(new_cmd, language, problem, implementation, get_env(language, problem, implementation, nworkers))
+                                times.append(t)
+                            problem_time = np.array(times).mean()
+                        else:
+                            problem_time = run_cmd(cmd, language, problem, implementation, get_env(language, problem, implementation, nworkers))
+
                         print(problem_time)
                         problem_times.append(problem_time)
                         time.sleep(SLEEP_TIME)

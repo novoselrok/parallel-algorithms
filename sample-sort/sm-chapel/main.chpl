@@ -3,6 +3,7 @@ use Random;
 use Time;
 
 config const nkeys = 10;
+config const initialSeed = 1;
 
 const OVERSAMPLING_FACTOR = 128;
 
@@ -157,7 +158,7 @@ proc getRandomNumber(seed: int) {
     return (seed * 1103515245 + 12345) & MY_RAND_MAX;
 }
 
-proc initRandomArray(n: int, initialSeed: int) {
+proc initRandomArray(n: int) {
     var arr: [{0..#n}] int;
     var randomNum = getRandomNumber(initialSeed);
     for i in 0..#n {
@@ -168,37 +169,33 @@ proc initRandomArray(n: int, initialSeed: int) {
 }
 
 proc main() {
-    var times: [{0..#REPEAT}] real;
-    for i in 0..#REPEAT {
-        var arr = initRandomArray(nkeys, i + 1);
-        var nbins = here.maxTaskPar;
-        var watch: Timer;
-        watch.start();
+    var arr = initRandomArray(nkeys);
+    var nbins = here.maxTaskPar;
+    var watch: Timer;
+    watch.start();
 
-        // Init bins
-        var bins: [{0..#nbins}][{0..#nbins}] unmanaged BinArray;
-        for i in 0..#nbins {
-            for j in 0..#nbins {
-                bins[i][j] = new unmanaged BinArray();
-            }
-        }
-
-        bin(arr, nbins, bins);
-
-        var sortedArray = subsort(nbins, bins);
-
-        times[i] = watch.elapsed();
-
-        if !isSorted(sortedArray) {
-            writeln("Array not sorted!");
-        }
-
-        for i in 0..#nbins {
-            for j in 0..#nbins {
-                delete bins[i][j];
-            }
+    // Init bins
+    var bins: [{0..#nbins}][{0..#nbins}] unmanaged BinArray;
+    for i in 0..#nbins {
+        for j in 0..#nbins {
+            bins[i][j] = new unmanaged BinArray();
         }
     }
-    writeln((+ reduce times) / REPEAT);
+
+    bin(arr, nbins, bins);
+
+    var sortedArray = subsort(nbins, bins);
+
+    writeln(watch.elapsed());
+
+    if !isSorted(sortedArray) {
+        writeln("Array not sorted!");
+    }
+
+    for i in 0..#nbins {
+        for j in 0..#nbins {
+            delete bins[i][j];
+        }
+    }
 }
 

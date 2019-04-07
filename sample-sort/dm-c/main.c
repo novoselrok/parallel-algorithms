@@ -276,6 +276,7 @@ int main(int argc, char** argv) {
             );
             memcpy(&subarray[offset], recv_array, bin_counts[source] * sizeof(int));
             offset += bin_counts[source];
+            free(recv_array);
         }
 
         myqsort(subarray, 0, subarray_size - 1);
@@ -339,6 +340,8 @@ int main(int argc, char** argv) {
                 );
                 memcpy(&sorted_array[offset], source_subarray, subarray_sizes[source] * sizeof(int));
                 offset += subarray_sizes[source];
+                free(subarray_sizes);
+                free(source_subarray);
             }
         }
 
@@ -357,6 +360,13 @@ int main(int argc, char** argv) {
         free(my_arr);
         free(sendcounts);
         free(displs);
+        free(sample_keys);
+        free(subarray);
+        free(my_tally);
+        for (int i = 0; i < m; i++) {
+            free(my_bins[i]);
+        }
+        free(my_bins);
     }
 
     if (rank == MASTER) {

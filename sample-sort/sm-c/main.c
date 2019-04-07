@@ -168,11 +168,13 @@ void subsort(T* sorted_array, T*** bins, int** tally, int m) {
             offset += count;
         }
 
-        // qsort(subarray, col_sum[thread_id], sizeof(T), cmpfunc);
         myqsort(subarray, 0, col_sum[thread_id] - 1);
 
         memcpy(&sorted_array[prefix_col_sum[thread_id]], subarray, sizeof(T) * col_sum[thread_id]);
+        free(subarray);
     }
+    free(col_sum);
+    free(prefix_col_sum);
 }
 
 #define REPEAT 100

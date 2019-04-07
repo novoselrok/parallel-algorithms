@@ -6,6 +6,7 @@ use ReplicatedDist;
 use CommDiagnostics;
 
 config const nkeys = 10;
+config const initialSeed = 1;
 
 const OVERSAMPLING_FACTOR = 128;
 
@@ -114,7 +115,7 @@ proc getRandomNumber(seed: int) {
     return (seed * 1103515245 + 12345) & MY_RAND_MAX;
 }
 
-proc initRandomArray(arr:[] int, n: int, initialSeed: int) {
+proc initRandomArray(arr:[] int, n: int) {
     var localSubdomain = arr.localSubdomain();
     var randomNum = getRandomNumber(initialSeed);
     var i = 0;
@@ -129,60 +130,56 @@ proc initRandomArray(arr:[] int, n: int, initialSeed: int) {
 }
 
 proc main() {
-    var times: [{0..#REPEAT}] real;
-    for i in 0..#REPEAT {
-        var keysSpace = {0..#nkeys};
-        var keysDomain = keysSpace dmapped Block(boundingBox=keysSpace);
-        var arr: [keysDomain] int;
-        coforall L in Locales do on L {
-            initRandomArray(arr, nkeys, i + 1);
-        }
-        var nbins = numLocales;
+    var keysSpace = {0..#nkeys};
+    var keysDomain = keysSpace dmapped Block(boundingBox=keysSpace);
+    var arr: [keysDomain] int;
+    coforall L in Locales do on L {
+        initRandomArray(arr, nkeys);
+    }
+    var nbins = numLocales;
 
-        var binsLocaleView = {0..0, 0..#nbins};
-        var binsLocales: [binsLocaleView] locale = reshape(Locales, binsLocaleView);
+    var binsLocaleView = {0..0, 0..#nbins};
+    var binsLocales: [binsLocaleView] locale = reshape(Locales, binsLocaleView);
 
-        var binsSpace = {0..#nbins, 0..#nbins};
-        var binsDomain = binsSpace dmapped Block(boundingBox=binsSpace, targetLocales=binsLocales);
-        var bins: [binsDomain] unmanaged BinArray;
+    var binsSpace = {0..#nbins, 0..#nbins};
+    var binsDomain = binsSpace dmapped Block(boundingBox=binsSpace, targetLocales=binsLocales);
+    var bins: [binsDomain] unmanaged BinArray;
 
-        var watch: Timer;
-        watch.start();
+    var watch: Timer;
+    watch.start();
 
-        var sampleKeysDomain = {0..#nbins-1} dmapped Replicated();
-        var sampleKeys: [sampleKeysDomain] int;
-        getSampleKeys(sampleKeys, arr, nbins);
+    var sampleKeysDomain = {0..#nbins-1} dmapped Replicated();
+    var sampleKeys: [sampleKeysDomain] int;
+    getSampleKeys(sampleKeys, arr, nbins);
 
-        for L in Locales {
-            sampleKeys.replicand(L) = sampleKeys;
-        }
+    for L in Locales {
+        sampleKeys.replicand(L) = sampleKeys;
+    }
 
-        coforall L in Locales do on L {
-            var binsRow = computeBins(arr, sampleKeys, nbins);
-            for i in binsRow.domain {
-                bins[here.id, i] = binsRow[i];
-            }
-        }
-
-        var sortedArray: [0..-1] int;
-        var sortedSubarrays: [0..#numLocales] unmanaged BinArray;
-        coforall L in Locales do on L {
-            var subarray: [0..-1] int;
-            for i in 0..#nbins {
-                subarray.push_back(bins[i, here.id].arr);
-            }
-            myqsort(subarray);
-            sortedSubarrays[here.id] = new unmanaged BinArray();
-            sortedSubarrays[here.id].arr.push_back(subarray);
-        }
-
-        for sub in sortedSubarrays {
-            sortedArray.push_back(sub.arr);
-        }
-        times[i] = watch.elapsed();
-        if !isSorted(sortedArray) {
-            writeln("Array not sorted!");
+    coforall L in Locales do on L {
+        var binsRow = computeBins(arr, sampleKeys, nbins);
+        for i in binsRow.domain {
+            bins[here.id, i] = binsRow[i];
         }
     }
-    writeln((+ reduce times) / REPEAT);
+
+    var sortedArray: [0..-1] int;
+    var sortedSubarrays: [0..#numLocales] unmanaged BinArray;
+    coforall L in Locales do on L {
+        var subarray: [0..-1] int;
+        for i in 0..#nbins {
+            subarray.push_back(bins[i, here.id].arr);
+        }
+        myqsort(subarray);
+        sortedSubarrays[here.id] = new unmanaged BinArray();
+        sortedSubarrays[here.id].arr.push_back(subarray);
+    }
+
+    for sub in sortedSubarrays {
+        sortedArray.push_back(sub.arr);
+    }
+    writeln(watch.elapsed());
+    if !isSorted(sortedArray) {
+        writeln("Array not sorted!");
+    }
 }
