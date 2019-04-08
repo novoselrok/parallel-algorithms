@@ -38,7 +38,7 @@ proc myqsort(arr: [] int) {
     myqsort(arr, 0, arr.size - 1);
 }
 
-param REPEAT = 100;
+param REPEAT = 50;
 param MY_RAND_MAX = (1 << 31) - 1;
 
 proc getRandomNumber(seed: int) {

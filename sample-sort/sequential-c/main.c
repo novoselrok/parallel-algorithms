@@ -36,7 +36,7 @@ void myqsort(T* arr, int left, int right) {
     myqsort(arr, pivot_idx, right); // sort right of pivot
 }
 
-#define REPEAT 100
+#define REPEAT 50
 #define MY_RAND_MAX ((1U << 31) - 1)
 int get_random_number(unsigned int seed) {
     return (seed * 1103515245 + 12345) & MY_RAND_MAX;

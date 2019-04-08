@@ -148,7 +148,7 @@ def main(args):
                     try:
                         if language == 'chapel' and problem == 'sample-sort' and implementation != 'sequential':
                             times = []
-                            for initial_seed in range(100):
+                            for initial_seed in range(50):
                                 new_cmd = cmd + ' --initialSeed=' + str(initial_seed)
                                 t = run_cmd(new_cmd, language, problem, implementation, get_env(language, problem, implementation, nworkers))
                                 times.append(t)

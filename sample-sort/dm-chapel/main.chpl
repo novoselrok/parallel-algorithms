@@ -108,7 +108,7 @@ proc computeBins(arr: [] int, sampleKeys: [] int, m: int) {
     }
     return bins;
 }
-param REPEAT = 100;
+param REPEAT = 50;
 param MY_RAND_MAX = (1 << 31) - 1;
 
 proc getRandomNumber(seed: int) {

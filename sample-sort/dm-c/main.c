@@ -112,7 +112,7 @@ void compute_bins(int* arr, int n, int m, int* sample_keys, int** bins, int* tal
     free(index);
 }
 
-#define REPEAT 100
+#define REPEAT 50
 #define MY_RAND_MAX ((1U << 31) - 1)
 int get_random_number(unsigned int seed) {
     return (seed * 1103515245 + 12345) & MY_RAND_MAX;

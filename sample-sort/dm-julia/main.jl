@@ -107,7 +107,7 @@ end
     subarray
 end
 
-const REPEAT = 100
+const REPEAT = 50
 const MY_RAND_MAX = ((1 << 31) - 1)
 
 function get_random_number(seed::Int)

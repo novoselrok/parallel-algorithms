@@ -151,7 +151,6 @@ proc subsort(m: int, bins: [{0..#m}][{0..#m}] unmanaged BinArray) {
     return sortedArray;
 }
 
-param REPEAT = 100;
 param MY_RAND_MAX = (1 << 31) - 1;
 
 proc getRandomNumber(seed: int) {
