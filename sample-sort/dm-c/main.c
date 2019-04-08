@@ -340,9 +340,9 @@ int main(int argc, char** argv) {
                 );
                 memcpy(&sorted_array[offset], source_subarray, subarray_sizes[source] * sizeof(int));
                 offset += subarray_sizes[source];
-                free(subarray_sizes);
                 free(source_subarray);
             }
+            free(subarray_sizes);
         }
 
         MPI_Barrier(MPI_COMM_WORLD);
