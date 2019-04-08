@@ -1,5 +1,6 @@
 using Distributed
 using DelimitedFiles
+@everywhere using DistributedArrays
 
 const OVERSAMPLING_FACTOR = 128
 const BINS_TYPE = Array{Array{Int,1},1}
@@ -84,7 +85,8 @@ end
     bins
 end
 
-@everywhere function bin_subsort(arr::Array{Int}, sample_keys::Array{Int,1}, m::Int, channels::Array{RemoteChannel{IntArrayCh}})
+@everywhere function bin_subsort(darr::DArray{Int}, sample_keys::Array{Int,1}, m::Int, channels::Array{RemoteChannel{IntArrayCh}})
+    arr = localpart(darr)
     ob_rank = myid() - 1
     bins = compute_bin_array(arr, sample_keys, m)
     
@@ -127,25 +129,25 @@ function main(args)
     n = parse(Int64, args[1])
 
     for iter in 1:REPEAT
-        arr = init_random_array(n, iter)
+        randomarr = init_random_array(n, iter)
+        arr = distribute(randomarr)
         nbins = nworkers()
         
         start_time = time_ns()
-        sample_keys = get_sample_keys(arr, nbins)
-        nkeys = length(arr)
+        sample_keys = get_sample_keys(randomarr, nbins)
         channels = [RemoteChannel(()->IntArrayCh(nbins)) for _ in 1:nworkers()]
 
         tasks = []
         @sync for worker in workers()
             zb_rank = worker - 2
 
-            blocksize = div(nkeys + nbins - 1, nbins)
+            blocksize = div(n + nbins - 1, nbins)
             start = zb_rank * blocksize
-            end_ = min(start + blocksize, nkeys)
+            end_ = min(start + blocksize, n)
             start += 1
             subarray_size = end_ - start + 1
 
-            task = @spawnat worker bin_subsort(arr[start:end_], sample_keys, nbins, channels)
+            task = @spawnat worker bin_subsort(arr, sample_keys, nbins, channels)
             push!(tasks, task)
         end
 
@@ -163,6 +165,7 @@ function main(args)
             end
         end
         push!(times, elapsed)
+        close(arr)
     end
     sum(times) / REPEAT
 end
