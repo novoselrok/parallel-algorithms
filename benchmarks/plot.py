@@ -59,7 +59,7 @@ data_sizes = {
     'nbody-bh': [10000, 20000, 40000, 80000]
 }
 
-def plot_workers(workers_df, problem, filename, title, xlabel):
+def plot_workers(workers_df, problem, filename, title, subplot_title_prefix, xlabel):
     fig, axes = plt.subplots(2, 2)
     
     for x in range(2):
@@ -77,7 +77,7 @@ def plot_workers(workers_df, problem, filename, title, xlabel):
             
             ax.set_ylabel('Čas [sekunde]', fontsize=8)
             ax.set_xlabel(xlabel, fontsize=8)
-            ax.set_title(str(size), fontsize=9)
+            ax.set_title(subplot_title_prefix + str(size), fontsize=9)
             ax.legend(fontsize=8)
     
     fig.suptitle(title)
@@ -95,19 +95,24 @@ def main():
     df = pd.read_csv('benchmarks.csv')
 
     plot_sequential(df[(df['implementation'] == 'sequential') & (df['problem'] == 'kmeans')], 'Število točk', 'k-means - zaporedno', 'kmeans-seq')
-    plot_sequential(df[(df['implementation'] == 'sequential') & (df['problem'] == 'sample-sort')], 'Število števil', 'Urejanje z vzorčenjem - zaporedno', 'sample-sort-seq', use_xaxis_fmt=True)
+    plot_sequential(df[(df['implementation'] == 'sequential') & (df['problem'] == 'sample-sort')], 'Število elementov', 'Urejanje z vzorčenjem - zaporedno', 'sample-sort-seq', use_xaxis_fmt=True)
     plot_sequential(df[(df['implementation'] == 'sequential') & (df['problem'] == 'nbody-bh')], 'Število teles', 'Barnes-Hut simulacija n teles - zaporedno', 'nbody-bh-seq')
 
     kmeans_sm_df = df[(df['implementation'] == 'sm') & (df['problem'] == 'kmeans')]
     sample_sort_sm_df = df[(df['implementation'] == 'sm') & (df['problem'] == 'sample-sort')]
     nbody_sm_df = df[(df['implementation'] == 'sm') & (df['problem'] == 'nbody-bh')]
 
-    plot_workers(kmeans_sm_df, 'kmeans', 'kmeans-sm', 'k-means - deljeni spomin', 'Število niti')
-    plot_workers(sample_sort_sm_df, 'sample-sort', 'sample-sort-sm', 'Urejanje z vzorčenjem - deljeni spomin', 'Število niti')
-    plot_workers(nbody_sm_df, 'nbody-bh', 'nbody-bh-sm', 'Barnes-Hut simulacija n teles - deljeni spomin', 'Število niti')
+    plot_workers(kmeans_sm_df, 'kmeans', 'kmeans-sm', 'k-means - skupni pomnilnik', 'Število točk: ', 'Število niti')
+    plot_workers(sample_sort_sm_df, 'sample-sort', 'sample-sort-sm', 'Urejanje z vzorčenjem - skupni pomnilnik', 'Število elementov: ', 'Število niti')
+    plot_workers(nbody_sm_df, 'nbody-bh', 'nbody-bh-sm', 'Barnes-Hut simulacija n teles - skupni pomnilnik', 'Število teles: ', 'Število niti')
 
+    kmeans_dm_df = df[(df['implementation'] == 'dm') & (df['problem'] == 'kmeans')]
+    sample_sort_dm_df = df[(df['implementation'] == 'dm') & (df['problem'] == 'sample-sort')]
     nbody_dm_df = df[(df['implementation'] == 'dm') & (df['problem'] == 'nbody-bh')]
-    plot_workers(nbody_dm_df, 'nbody-bh', 'nbody-bh-dm', 'Barnes-Hut simulacija n teles - porazdeljeni spomin', 'Število procesov')
+
+    plot_workers(kmeans_dm_df, 'kmeans', 'kmeans-dm', 'k-means - porazdeljeni pomnilnik', 'Število točk: ', 'Število procesov')
+    plot_workers(sample_sort_dm_df, 'sample-sort', 'sample-sort-dm', 'Urejanje z vzorčenjem - porazdeljeni pomnilnik', 'Število elementov: ', 'Število procesov')
+    plot_workers(nbody_dm_df, 'nbody-bh', 'nbody-bh-dm', 'Barnes-Hut simulacija n teles - porazdeljeni pomnilnik', 'Število teles: ', 'Število procesov')
 
 
 if __name__ == "__main__":
