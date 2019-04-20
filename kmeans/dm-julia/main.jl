@@ -2,6 +2,7 @@ using Distributed
 using DelimitedFiles
 @everywhere using LinearAlgebra
 @everywhere using StaticArrays
+@everywhere using DistributedArrays
 
 @everywhere import Base.+
 
@@ -60,7 +61,8 @@ end
     (new_clusters, labels)
 end
 
-@everywhere function work(k::Int, max_iter::Int, points::Array{Point}, initial_clusters::Array{Cluster}, clusters_channels::Array{RemoteChannel{ClustersCh}})
+@everywhere function work(k::Int, max_iter::Int, dpoints::DArray{Point}, initial_clusters::Array{Cluster}, clusters_channels::Array{RemoteChannel{ClustersCh}})
+    points = localpart(dpoints)
     clusters = copy(initial_clusters)
     rank = myid()
     labels::Array{Int} = []
@@ -97,6 +99,7 @@ function main(args)
     points_read = readdlm(filename)::Array{Float64, 2}
     num_points = size(points_read, 1)
     points::Array{Point} = [Point(points_read[i, :]) for i in 1:num_points]
+    arr = distribute(points)
     clusters::Array{Cluster} = []
     world_size = nworkers()
 
@@ -112,14 +115,7 @@ function main(args)
     tasks = []
     @sync for worker in workers()
         zb_rank = worker - 2
-
-        blocksize = div(num_points + world_size - 1, world_size)
-        start = zb_rank * blocksize
-        end_ = min(start + blocksize, num_points)
-        start += 1
-        subarray_size = end_ - start + 1
-        
-        task = @spawnat worker work(k, max_iter, points[start:end_], clusters, clusters_channels)
+        task = @spawnat worker work(k, max_iter, arr, clusters, clusters_channels)
         push!(tasks, task)
     end
 
