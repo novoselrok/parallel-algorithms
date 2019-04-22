@@ -1,0 +1,122 @@
+[
+    {
+        "problem": "nbody-bh",
+        "size": 10000,
+        "implementation": "dm",
+        "times": [
+            3.43
+        ],
+        "language": "julia",
+        "nworkers": 8
+    },
+    {
+        "problem": "nbody-bh",
+        "size": 10000,
+        "implementation": "dm",
+        "times": [
+            4.33
+        ],
+        "language": "julia",
+        "nworkers": 16
+    },
+    {
+        "problem": "nbody-bh",
+        "size": 10000,
+        "implementation": "dm",
+        "times": [
+            14.75
+        ],
+        "language": "julia",
+        "nworkers": 32
+    },
+    {
+        "problem": "nbody-bh",
+        "size": 20000,
+        "implementation": "dm",
+        "times": [
+            7.75
+        ],
+        "language": "julia",
+        "nworkers": 8
+    },
+    {
+        "problem": "nbody-bh",
+        "size": 20000,
+        "implementation": "dm",
+        "times": [
+            6.19
+        ],
+        "language": "julia",
+        "nworkers": 16
+    },
+    {
+        "problem": "nbody-bh",
+        "size": 20000,
+        "implementation": "dm",
+        "times": [
+            16.1
+        ],
+        "language": "julia",
+        "nworkers": 32
+    },
+    {
+        "problem": "nbody-bh",
+        "size": 40000,
+        "implementation": "dm",
+        "times": [
+            17.63
+        ],
+        "language": "julia",
+        "nworkers": 8
+    },
+    {
+        "problem": "nbody-bh",
+        "size": 40000,
+        "implementation": "dm",
+        "times": [
+            12.27
+        ],
+        "language": "julia",
+        "nworkers": 16
+    },
+    {
+        "problem": "nbody-bh",
+        "size": 40000,
+        "implementation": "dm",
+        "times": [
+            18.9
+        ],
+        "language": "julia",
+        "nworkers": 32
+    },
+    {
+        "problem": "nbody-bh",
+        "size": 80000,
+        "implementation": "dm",
+        "times": [
+            49.23
+        ],
+        "language": "julia",
+        "nworkers": 8
+    },
+    {
+        "problem": "nbody-bh",
+        "size": 80000,
+        "implementation": "dm",
+        "times": [
+            26.66
+        ],
+        "language": "julia",
+        "nworkers": 16
+    },
+    {
+        "problem": "nbody-bh",
+        "size": 80000,
+        "implementation": "dm",
+        "times": [
+            25.01
+        ],
+        "language": "julia",
+        "nworkers": 32
+    }
+]
