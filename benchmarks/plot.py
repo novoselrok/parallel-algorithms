@@ -69,7 +69,7 @@ def plot_workers(workers_df, problem, filename, title, subplot_title_prefix, xla
             ax = axes[x, y]
 
             for lang in languages:
-                lang_size_df = workers_df[(workers_df['language'] == lang) & (workers_df['size'] == size)]
+                lang_size_df = workers_df[(workers_df['language'] == lang) & (workers_df['size'] == size)].sort_values(by=['nworkers'])
                 nworkers = lang_size_df['nworkers']
 
                 ax.plot(nworkers, lang_size_df['time'], label=LABELS[lang], marker='o', color=COLORS[lang])
