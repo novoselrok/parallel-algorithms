@@ -1,0 +1,122 @@
+[
+    {
+        "language": "julia",
+        "nworkers": 8,
+        "problem": "sample-sort",
+        "size": 10000000,
+        "implementation": "dm",
+        "times": [
+            4.48979592
+        ]
+    },
+    {
+        "language": "julia",
+        "nworkers": 16,
+        "problem": "sample-sort",
+        "size": 10000000,
+        "implementation": "dm",
+        "times": [
+            2.999998
+        ]
+    },
+    {
+        "language": "julia",
+        "nworkers": 32,
+        "problem": "sample-sort",
+        "size": 10000000,
+        "implementation": "dm",
+        "times": [
+            3.99999999
+        ]
+    },
+    {
+        "language": "julia",
+        "nworkers": 8,
+        "problem": "sample-sort",
+        "size": 20000000,
+        "implementation": "dm",
+        "times": [
+            7.8947368414
+        ]
+    },
+    {
+        "language": "julia",
+        "nworkers": 16,
+        "problem": "sample-sort",
+        "size": 20000000,
+        "implementation": "dm",
+        "times": [
+            5.9875
+        ]
+    },
+    {
+        "language": "julia",
+        "nworkers": 32,
+        "problem": "sample-sort",
+        "size": 20000000,
+        "implementation": "dm",
+        "times": [
+            6.3328
+        ]
+    },
+    {
+        "language": "julia",
+        "nworkers": 8,
+        "problem": "sample-sort",
+        "size": 40000000,
+        "implementation": "dm",
+        "times": [
+            14.2283638
+        ]
+    },
+    {
+        "language": "julia",
+        "nworkers": 16,
+        "problem": "sample-sort",
+        "size": 40000000,
+        "implementation": "dm",
+        "times": [
+            12.2038166667
+        ]
+    },
+    {
+        "language": "julia",
+        "nworkers": 32,
+        "problem": "sample-sort",
+        "size": 40000000,
+        "implementation": "dm",
+        "times": [
+            13.970588233
+        ]
+    },
+    {
+        "language": "julia",
+        "nworkers": 8,
+        "problem": "sample-sort",
+        "size": 80000000,
+        "implementation": "dm",
+        "times": [
+            28.955
+        ]
+    },
+    {
+        "language": "julia",
+        "nworkers": 16,
+        "problem": "sample-sort",
+        "size": 80000000,
+        "implementation": "dm",
+        "times": [
+            22.23442
+        ]
+    },
+    {
+        "language": "julia",
+        "nworkers": 32,
+        "problem": "sample-sort",
+        "size": 80000000,
+        "implementation": "dm",
+        "times": [
+            23.03301666666664
+        ]
+    }
+]

@@ -1,1 +1,146 @@
-[{"language": "c", "times": [1.955474, 1.95412, 1.955604], "problem": "sample-sort", "nworkers": 1, "implementation": "dm", "size": 10000000}, {"language": "c", "times": [2.16606, 2.165713, 2.131076], "problem": "sample-sort", "nworkers": 2, "implementation": "dm", "size": 10000000}, {"language": "c", "times": [1.658917, 1.655967, 1.658344], "problem": "sample-sort", "nworkers": 4, "implementation": "dm", "size": 10000000}, {"language": "c", "times": [4.045894, 4.04615, 4.044738], "problem": "sample-sort", "nworkers": 1, "implementation": "dm", "size": 20000000}, {"language": "c", "times": [4.438875, 4.439841, 4.477651], "problem": "sample-sort", "nworkers": 2, "implementation": "dm", "size": 20000000}, {"language": "c", "times": [3.480509, 3.386272, 3.418062], "problem": "sample-sort", "nworkers": 4, "implementation": "dm", "size": 20000000}, {"language": "c", "times": [8.385825, 8.378813, 8.379106], "problem": "sample-sort", "nworkers": 1, "implementation": "dm", "size": 40000000}, {"language": "c", "times": [9.241132, 9.240683, 9.238859], "problem": "sample-sort", "nworkers": 2, "implementation": "dm", "size": 40000000}, {"language": "c", "times": [7.033102, 7.052573, 7.030082], "problem": "sample-sort", "nworkers": 4, "implementation": "dm", "size": 40000000}, {"language": "c", "times": [17.359597, 17.362117, 17.35926], "problem": "sample-sort", "nworkers": 1, "implementation": "dm", "size": 80000000}, {"language": "c", "times": [19.049014, 19.060228, 19.051353], "problem": "sample-sort", "nworkers": 2, "implementation": "dm", "size": 80000000}, {"language": "c", "times": [14.918986, 14.499553, 14.592363], "problem": "sample-sort", "nworkers": 4, "implementation": "dm", "size": 80000000}]
+[
+    {
+        "language": "c",
+        "times": [
+            1.955474,
+            1.95412,
+            1.955604
+        ],
+        "problem": "sample-sort",
+        "nworkers": 1,
+        "implementation": "dm",
+        "size": 10000000
+    },
+    {
+        "language": "c",
+        "times": [
+            2.16606,
+            2.165713,
+            2.131076
+        ],
+        "problem": "sample-sort",
+        "nworkers": 2,
+        "implementation": "dm",
+        "size": 10000000
+    },
+    {
+        "language": "c",
+        "times": [
+            1.658917,
+            1.655967,
+            1.658344
+        ],
+        "problem": "sample-sort",
+        "nworkers": 4,
+        "implementation": "dm",
+        "size": 10000000
+    },
+    {
+        "language": "c",
+        "times": [
+            4.045894,
+            4.04615,
+            4.044738
+        ],
+        "problem": "sample-sort",
+        "nworkers": 1,
+        "implementation": "dm",
+        "size": 20000000
+    },
+    {
+        "language": "c",
+        "times": [
+            4.438875,
+            4.439841,
+            4.477651
+        ],
+        "problem": "sample-sort",
+        "nworkers": 2,
+        "implementation": "dm",
+        "size": 20000000
+    },
+    {
+        "language": "c",
+        "times": [
+            3.480509,
+            3.386272,
+            3.418062
+        ],
+        "problem": "sample-sort",
+        "nworkers": 4,
+        "implementation": "dm",
+        "size": 20000000
+    },
+    {
+        "language": "c",
+        "times": [
+            8.385825,
+            8.378813,
+            8.379106
+        ],
+        "problem": "sample-sort",
+        "nworkers": 1,
+        "implementation": "dm",
+        "size": 40000000
+    },
+    {
+        "language": "c",
+        "times": [
+            9.241132,
+            9.240683,
+            9.238859
+        ],
+        "problem": "sample-sort",
+        "nworkers": 2,
+        "implementation": "dm",
+        "size": 40000000
+    },
+    {
+        "language": "c",
+        "times": [
+            7.033102,
+            7.052573,
+            7.030082
+        ],
+        "problem": "sample-sort",
+        "nworkers": 4,
+        "implementation": "dm",
+        "size": 40000000
+    },
+    {
+        "language": "c",
+        "times": [
+            17.359597,
+            17.362117,
+            17.35926
+        ],
+        "problem": "sample-sort",
+        "nworkers": 1,
+        "implementation": "dm",
+        "size": 80000000
+    },
+    {
+        "language": "c",
+        "times": [
+            19.049014,
+            19.060228,
+            19.051353
+        ],
+        "problem": "sample-sort",
+        "nworkers": 2,
+        "implementation": "dm",
+        "size": 80000000
+    },
+    {
+        "language": "c",
+        "times": [
+            14.918986,
+            14.499553,
+            14.592363
+        ],
+        "problem": "sample-sort",
+        "nworkers": 4,
+        "implementation": "dm",
+        "size": 80000000
+    }
+]

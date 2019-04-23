@@ -1,0 +1,120 @@
+[
+    {
+        "language": "chapel",
+        "nworkers": 8,
+        "problem": "sample-sort",
+        "size": 10000000,
+        "implementation": "dm",
+        "times": [
+            22.15487448979592
+        ]
+    },
+    {
+        "language": "chapel",
+        "nworkers": 16,
+        "problem": "sample-sort",
+        "size": 10000000,
+        "implementation": "dm",
+        "times": [
+            11.153793249999998
+        ]
+    },
+    {
+        "language": "chapel",
+        "nworkers": 32,
+        "problem": "sample-sort",
+        "size": 10000000,
+        "implementation": "dm",
+        "times": [
+            7.960403199999999
+        ]
+    },
+    {
+        "language": "chapel",
+        "nworkers": 8,
+        "problem": "sample-sort",
+        "size": 20000000,
+        "implementation": "dm",
+        "times": [
+            61.396678947368414
+        ]
+    },
+    {
+        "language": "chapel",
+        "nworkers": 16,
+        "problem": "sample-sort",
+        "size": 20000000,
+        "implementation": "dm",
+        "times": [
+            27.38139875
+        ]
+    },
+    {
+        "language": "chapel",
+        "nworkers": 32,
+        "problem": "sample-sort",
+        "size": 20000000,
+        "implementation": "dm",
+        "times": [
+            48.9203328
+        ]
+    },
+    {
+        "language": "chapel",
+        "nworkers": 8,
+        "problem": "sample-sort",
+        "size": 40000000,
+        "implementation": "dm",
+        "times": [
+            112.22848636363638
+        ]
+    },
+    {
+        "language": "chapel",
+        "nworkers": 16,
+        "problem": "sample-sort",
+        "size": 40000000,
+        "implementation": "dm",
+        "times": [
+            16.20381666666667
+        ]
+    },
+    {
+        "language": "chapel",
+        "nworkers": 32,
+        "problem": "sample-sort",
+        "size": 40000000,
+        "implementation": "dm",
+        "times": [
+            159.96779970588233
+        ]
+    },
+    {
+        "language": "chapel",
+        "nworkers": 8,
+        "problem": "sample-sort",
+        "size": 80000000,
+        "implementation": "dm",
+        "times": [
+            200.97355
+        ]
+    },
+    {
+        "language": "chapel",
+        "nworkers": 16,
+        "problem": "sample-sort",
+        "size": 80000000,
+        "implementation": "dm",
+        "times": [35.23442]
+    },
+    {
+        "language": "chapel",
+        "nworkers": 32,
+        "problem": "sample-sort",
+        "size": 80000000,
+        "implementation": "dm",
+        "times": [
+            206.03301666666664
+        ]
+    }
+]
